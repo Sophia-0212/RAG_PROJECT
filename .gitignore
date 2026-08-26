@@ -1,0 +1,9 @@
+.venv/
+.milvus/
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+.idea/
+logs/
+*.log
