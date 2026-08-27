@@ -96,7 +96,7 @@ class MilvusVectorSave:
 if __name__ == '__main__':
     import os
     # 解析文件内容
-    file_path = os.path.join(os.path.dirname(__file__), '..', 'datas', 'md', 'tech_report_0tfhhamx.md')
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'datas', 'md', 'crm_product_overview.md')
     parser = MarkdownParser()
     docs = parser.parse_markdown_to_documents(file_path)
 

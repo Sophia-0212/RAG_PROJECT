@@ -41,7 +41,7 @@ agent_with_history = RunnableWithMessageHistory(
 )
 
 resp2 = agent_with_history.invoke(
-    {'input': '什么是EUV光刻机？'},
+    {'input': '客户对价格有异议该怎么处理？'},
     config={'configurable': {"session_id": 'zs123'}}
 )
 

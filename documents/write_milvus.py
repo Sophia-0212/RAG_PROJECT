@@ -77,7 +77,7 @@ def milvus_writer_process(input_queue: Queue):
 
 if __name__ == '__main__':
     # 配置参数
-    md_dir = r'E:\my_project\langchain_demo01\md'  # Markdown文件目录
+    md_dir = os.path.join(os.path.dirname(__file__), '..', 'datas', 'md')  # Markdown文件目录
     queue_maxsize = 20  # 队列最大容量（防止内存溢出）
 
     mv = MilvusVectorSave()

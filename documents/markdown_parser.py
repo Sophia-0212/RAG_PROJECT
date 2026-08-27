@@ -81,7 +81,8 @@ class MarkdownParser:
 
 
 if __name__ == '__main__':
-    file_path = r'E:\my_project\RAG_PROJECT\datas\md\tech_report_0tfhhamx.md'
+    import os
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'datas', 'md', 'crm_product_overview.md')
     parser = MarkdownParser()
     docs = parser.parse_markdown_to_documents(file_path)
     for item in docs:

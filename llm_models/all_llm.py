@@ -3,11 +3,11 @@ from langchain_openai import ChatOpenAI
 
 from utils.env_utils import OPENAI_API_KEY, DEEPSEEK_API_KEY, TAVILY_API_KEY
 
-llm = ChatOpenAI(  # 百度千帆
+llm = ChatOpenAI(  # Ducc 内部网关
     temperature=0,
-    model='deepseek-v3.2',
+    model='gpt-5.5',
     api_key=OPENAI_API_KEY,
-    base_url="https://qianfan.baidubce.com/v2")
+    base_url="https://oneapi-comate.baidu-int.com/v1")
 
 
 web_search_tool = TavilySearchResults(max_results=2, tavily_api_key=TAVILY_API_KEY or "placeholder")

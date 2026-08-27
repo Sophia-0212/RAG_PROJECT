@@ -18,5 +18,5 @@ retriever = mv.vector_store_saved.as_retriever(
 retriever_tool = create_retriever_tool(
     retriever,
     'rag_retriever',
-    '搜索并返回关于 ‘半导体和芯片’ 的信息, 内容涵盖：半导体和芯片的封装、测试、光刻胶等'
+    '搜索并返回关于 "CRM系统" 的信息, 内容涵盖：销售SOP流程、产品功能模块、系统操作与故障排查、客户异议处理话术等'
 )
