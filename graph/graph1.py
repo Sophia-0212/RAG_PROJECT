@@ -3,6 +3,7 @@ from typing import Literal, List
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
+from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph
@@ -103,11 +104,15 @@ graph = workflow.compile(checkpointer=memory)
 
 
 # draw_graph(graph, 'graph_rag1-2.png')
+thread_id = str(uuid.uuid4())
+langfuse_handler = CallbackHandler()
 config = {
     "configurable": {
         # 检查点由session_id访问
-        "thread_id": str(uuid.uuid4()),
-    }
+        "thread_id": thread_id,
+    },
+    "callbacks": [langfuse_handler],
+    "metadata": {"langfuse_session_id": thread_id, "langfuse_tags": ["graph1"]},
 }
 
 _printed = set()  # set集合，避免重复打印

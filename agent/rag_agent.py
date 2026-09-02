@@ -4,6 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnableWithMessageHistory
 from langchain_core.tools import create_retriever_tool
 from langchain_community.chat_message_histories import ChatMessageHistory
+from langfuse.langchain import CallbackHandler
 from documents.milvus_db import MilvusVectorSave
 from llm_models.all_llm import llm
 from tools.retriever_tools import retriever_tool
@@ -42,7 +43,11 @@ agent_with_history = RunnableWithMessageHistory(
 
 resp2 = agent_with_history.invoke(
     {'input': '客户对价格有异议该怎么处理？'},
-    config={'configurable': {"session_id": 'zs123'}}
+    config={
+        'configurable': {"session_id": 'zs123'},
+        'callbacks': [CallbackHandler()],
+        'metadata': {"langfuse_session_id": 'zs123', "langfuse_tags": ["rag_agent"]},
+    }
 )
 
 print(resp2)

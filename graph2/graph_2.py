@@ -1,5 +1,7 @@
 from pprint import pprint
+from uuid import uuid4
 
+from langfuse.langchain import CallbackHandler
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 
@@ -160,8 +162,14 @@ while True:
         inputs = {
             "question": question
         }
+        langfuse_handler = CallbackHandler()
+        session_id = str(uuid4())
+        config = {
+            "callbacks": [langfuse_handler],
+            "metadata": {"langfuse_session_id": session_id, "langfuse_tags": ["graph2"]},
+        }
         # 流式执行工作流
-        for output in graph.stream(inputs):
+        for output in graph.stream(inputs, config=config):
             for key, value in output.items():
                 # 打印当前节点名称
                 pprint(f"Node '{key}':")  # 显示当前执行的节点名称

@@ -4,6 +4,8 @@ __pycache__/
 **/__pycache__/
 *.pyc
 .env
+langfuse/.env
+langfuse/volumes/
 .idea/
 logs/
 *.log
