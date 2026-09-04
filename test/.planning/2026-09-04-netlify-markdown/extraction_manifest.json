@@ -1,0 +1,522 @@
+[
+  {
+    "index": 1,
+    "id": "crm-ai-agent-模拟项目设定仅供训练",
+    "title": "CRM AI Agent 模拟项目设定（仅供训练）",
+    "headingLevel": "H1",
+    "filename": "001_CRM AI Agent 模拟项目设定（仅供训练）.md",
+    "sourceTextSha256": "04a73aa78f2eb2b13b44febaa3f219d36565810dd7b496fafb1ace286c6649b1",
+    "markdownSha256": "67a83bd51532e6a4f4f6b1fd48fc6a1ea6f05678adab98f4956b721e3ecb2727",
+    "bytes": 374
+  },
+  {
+    "index": 2,
+    "id": "0-模拟人物与时间线",
+    "title": "0. 模拟人物与时间线",
+    "headingLevel": "H2",
+    "filename": "002_0. 模拟人物与时间线.md",
+    "sourceTextSha256": "0830d0de381a423bb8ed2392b47e771f7eec27332acd81e4374b9a69a2aa3bc0",
+    "markdownSha256": "ea1e50971735589670c4b8d4bdc2a6bcbeafd767291baa4a82fae92fdca15803",
+    "bytes": 31
+  },
+  {
+    "index": 3,
+    "id": "01-五年级别的准确定位",
+    "title": "0.1 五年级别的准确定位",
+    "headingLevel": "H3",
+    "filename": "003_0.1 五年级别的准确定位.md",
+    "sourceTextSha256": "fba25605493e6b30f2b2c8d8fd8ea61fe283707a4d96dd4ae96fedf382721686",
+    "markdownSha256": "5dfd19af016e8720fd36e800308d293aec56f069aac87e81c9bbfddf022a6472",
+    "bytes": 897
+  },
+  {
+    "index": 4,
+    "id": "02-模拟个人职责",
+    "title": "0.2 模拟个人职责",
+    "headingLevel": "H3",
+    "filename": "004_0.2 模拟个人职责.md",
+    "sourceTextSha256": "fe85154566f17bff2c4d013b95a82ef27b7758f4a9f55869aec1493fa48c7d8f",
+    "markdownSha256": "e91e8f021c89765e4df9f3290859dd72ee8bb274bdacdf6c4e53af8c9a5ae16d",
+    "bytes": 751
+  },
+  {
+    "index": 5,
+    "id": "1-模拟业务背景与结果总览",
+    "title": "1. 模拟业务背景与结果总览",
+    "headingLevel": "H2",
+    "filename": "005_1. 模拟业务背景与结果总览.md",
+    "sourceTextSha256": "376815cc71b92392d022ef1813f7c7bce76903a845457e0abd93c1e50eef7a67",
+    "markdownSha256": "bc0719488c9c61bed1b74be5ac785f97c07cf1182ff2007ae120e54c53bec8d7",
+    "bytes": 40
+  },
+  {
+    "index": 6,
+    "id": "11-业务问题",
+    "title": "1.1 业务问题",
+    "headingLevel": "H3",
+    "filename": "006_1.1 业务问题.md",
+    "sourceTextSha256": "29e132511290a798f1f87916142f703d8fc7f1574ed51fb135eed728b285cbbd",
+    "markdownSha256": "273dbc4caabe5cec56efcff1bfaa5318ab662f03f62a4255c5c8f3bc17f08e71",
+    "bytes": 501
+  },
+  {
+    "index": 7,
+    "id": "12-模拟规模",
+    "title": "1.2 模拟规模",
+    "headingLevel": "H3",
+    "filename": "007_1.2 模拟规模.md",
+    "sourceTextSha256": "be9f5a048f7d03fb56cda6ccb4e527ceffd780f102b841f5748aac4391cb767d",
+    "markdownSha256": "4d42587eeb90d8339aad687222fd80b2221021f3a2b92309df5706179c826b37",
+    "bytes": 477
+  },
+  {
+    "index": 8,
+    "id": "13-模拟结果",
+    "title": "1.3 模拟结果",
+    "headingLevel": "H3",
+    "filename": "008_1.3 模拟结果.md",
+    "sourceTextSha256": "3713377a303c2a8afdc252a9ee8fb8e87cd13e5b66c4aeb3f3d16c9be2effc0e",
+    "markdownSha256": "da115484f2fed90eb70467de2d6bcdad39e624f1458b858aba9f54fff6d11e12",
+    "bytes": 862
+  },
+  {
+    "index": 9,
+    "id": "2-模拟总体架构",
+    "title": "2. 模拟总体架构",
+    "headingLevel": "H2",
+    "filename": "009_2. 模拟总体架构.md",
+    "sourceTextSha256": "b3d3a3bcb4262923749f7813c89633c7d0bfde7d9ac3201e252df5a0e4f9a814",
+    "markdownSha256": "e416055d689a27b844e231cb13f3794498efdbcef1bdf0b711f049d1dc08c5a2",
+    "bytes": 1532
+  },
+  {
+    "index": 10,
+    "id": "3-onecrm-客户档案模拟实现",
+    "title": "3. ONECRM 客户档案模拟实现",
+    "headingLevel": "H2",
+    "filename": "010_3. ONECRM 客户档案模拟实现.md",
+    "sourceTextSha256": "6b72b74163176b2af5ea2cd03b2395c73d570a500054c8ffb3079e1dadca3556",
+    "markdownSha256": "1a38cc331ec15bf1f0eca10e4e370a48b259214ffc50d58e71dba1f6c159d5c6",
+    "bytes": 38
+  },
+  {
+    "index": 11,
+    "id": "31-数据模型",
+    "title": "3.1 数据模型",
+    "headingLevel": "H3",
+    "filename": "011_3.1 数据模型.md",
+    "sourceTextSha256": "e6345837bafa425c650a5febe5fca7b488b59c5d277cac31a90f3d838f171b66",
+    "markdownSha256": "038e699b4f98ad0f9123096ac38af16c0b788b39d807d8a7968bc53a4811fc49",
+    "bytes": 586
+  },
+  {
+    "index": 12,
+    "id": "32-关键不变量",
+    "title": "3.2 关键不变量",
+    "headingLevel": "H3",
+    "filename": "012_3.2 关键不变量.md",
+    "sourceTextSha256": "a967ca105c0712c26c8c1c00e5f136397945f3e6c814e5914c1e10f54a6af318",
+    "markdownSha256": "91c558c2feca3233464f706fdaea65ad6914545ec1e0ae8998f607cefe62d1fa",
+    "bytes": 452
+  },
+  {
+    "index": 13,
+    "id": "33-模拟稳定性数据",
+    "title": "3.3 模拟稳定性数据",
+    "headingLevel": "H3",
+    "filename": "013_3.3 模拟稳定性数据.md",
+    "sourceTextSha256": "890cb29ac6c891422eeda5cb1e86c0920bf3d2298b0c2a59b1f0643a6505204b",
+    "markdownSha256": "788927662bf0fb6f5ce3d17fdb503ab15317325410aecd4cefceffe8ca6bd23b",
+    "bytes": 414
+  },
+  {
+    "index": 14,
+    "id": "4-dify-二次开发模拟实现",
+    "title": "4. Dify 二次开发模拟实现",
+    "headingLevel": "H2",
+    "filename": "014_4. Dify 二次开发模拟实现.md",
+    "sourceTextSha256": "4921d626b7bbb40e096518aaa24b765520b7a462daf2b381020f4ba0a8499d69",
+    "markdownSha256": "b9a2e9f11632cb4883400d83e0eca165f7d65fac2b3f651e87d91051dac4614e",
+    "bytes": 36
+  },
+  {
+    "index": 15,
+    "id": "41-版本与改动边界",
+    "title": "4.1 版本与改动边界",
+    "headingLevel": "H3",
+    "filename": "015_4.1 版本与改动边界.md",
+    "sourceTextSha256": "615cbe772608768671e0048cd51de15cf39d569ea0cc65480bf51b7a45bce685",
+    "markdownSha256": "3858c96955a81c09697202f9e3a7ef8e3abcb5aa9a6d0fe2511876760a3cef66",
+    "bytes": 635
+  },
+  {
+    "index": 16,
+    "id": "42-权限模型",
+    "title": "4.2 权限模型",
+    "headingLevel": "H3",
+    "filename": "016_4.2 权限模型.md",
+    "sourceTextSha256": "01bb13b95deda94ae658cb4bb6c363a9d19d656287cd182143a0674963f4b81c",
+    "markdownSha256": "c3cffc036aa2ec83d3da19975a35d0d7ab64d799614b12f28bd36c2190eb92dc",
+    "bytes": 951
+  },
+  {
+    "index": 17,
+    "id": "43-鉴权改造成果",
+    "title": "4.3 鉴权改造成果",
+    "headingLevel": "H3",
+    "filename": "017_4.3 鉴权改造成果.md",
+    "sourceTextSha256": "572fb99b86c4d87a3b782bb653fdcb8f1a4cd3a54c7b76e1dd453da8946778d3",
+    "markdownSha256": "f3315c1652dcba0118fed7ed4d71aa9ca8b17037dfdb59356968f4bccd3f4fa2",
+    "bytes": 351
+  },
+  {
+    "index": 18,
+    "id": "5-hitl-审批节点模拟实现",
+    "title": "5. HITL 审批节点模拟实现",
+    "headingLevel": "H2",
+    "filename": "018_5. HITL 审批节点模拟实现.md",
+    "sourceTextSha256": "d53b0cbb051039a1951f56dd2789aa9af445ca0692fbb85be0608221cc97c3d3",
+    "markdownSha256": "50a34621dfda3e5901a75df7feaa39b150ed29874a726704140ea805073a7c88",
+    "bytes": 36
+  },
+  {
+    "index": 19,
+    "id": "51-使用场景",
+    "title": "5.1 使用场景",
+    "headingLevel": "H3",
+    "filename": "019_5.1 使用场景.md",
+    "sourceTextSha256": "e7608898aebadf81a3a18c9216878b04e55ad71abd2c60bec804939a6181dbef",
+    "markdownSha256": "055017869a1cfe3bd62807201ed49e00e62f52e5f48f9b030bb08c324822a94d",
+    "bytes": 467
+  },
+  {
+    "index": 20,
+    "id": "52-状态机",
+    "title": "5.2 状态机",
+    "headingLevel": "H3",
+    "filename": "020_5.2 状态机.md",
+    "sourceTextSha256": "e19aff9871b9c4014edf186bfaf4363948e657f80915c68a9ed20c307b8d3313",
+    "markdownSha256": "7e3b986ec7fb4955a0b5fee94b5bfbf2305cf1e9648e96989963090327e40107",
+    "bytes": 744
+  },
+  {
+    "index": 21,
+    "id": "53-核心数据",
+    "title": "5.3 核心数据",
+    "headingLevel": "H3",
+    "filename": "021_5.3 核心数据.md",
+    "sourceTextSha256": "8b7706ae82df380b93b9d8602d4bb0f63e56df4230747d3c3e6aef1a7fed2891",
+    "markdownSha256": "75818bdb21d87d81add2af61fc7a7886706229d0fc0f92cccf4f8454e9d9c2ab",
+    "bytes": 478
+  },
+  {
+    "index": 22,
+    "id": "54-暂停与恢复时序",
+    "title": "5.4 暂停与恢复时序",
+    "headingLevel": "H3",
+    "filename": "022_5.4 暂停与恢复时序.md",
+    "sourceTextSha256": "da0e89509a7a33c539c39c55c3b6952da4dff3c98af0b477321a4d7c21f9ee86",
+    "markdownSha256": "6cc92b3d99d5e96e79940279414dc237c864b044aff1fde05a9c7eb1be3f6fce",
+    "bytes": 699
+  },
+  {
+    "index": 23,
+    "id": "55-模拟运行指标",
+    "title": "5.5 模拟运行指标",
+    "headingLevel": "H3",
+    "filename": "023_5.5 模拟运行指标.md",
+    "sourceTextSha256": "77ffca7a93b3a12371b8af6c6e678a7275674280e6aa0eb0747cbc6df40044dc",
+    "markdownSha256": "3958159de969a42fc0f99fd43ea991a1ae4b212fa357f4758f43db8ae7d2ae6d",
+    "bytes": 388
+  },
+  {
+    "index": 24,
+    "id": "6-langgraph-rag-模拟实现",
+    "title": "6. LangGraph RAG 模拟实现",
+    "headingLevel": "H2",
+    "filename": "024_6. LangGraph RAG 模拟实现.md",
+    "sourceTextSha256": "cdaca7be3ef20a5055817a4fcc265e385bbbb5183dc86049da6689751eb8e96f",
+    "markdownSha256": "edd87997ea279f2d80a71d0871494e982bf50395fd247327f7e910a251ab6436",
+    "bytes": 33
+  },
+  {
+    "index": 25,
+    "id": "61-知识入库",
+    "title": "6.1 知识入库",
+    "headingLevel": "H3",
+    "filename": "025_6.1 知识入库.md",
+    "sourceTextSha256": "731cdcbfb9ac0c8c1f6be804d41293fb71ed465da0cc65eccf299a15209326c2",
+    "markdownSha256": "4f4594e8c27025e1bc0d9675c5a39cda9271bb66b14014ce6eb8dd386a2f0b66",
+    "bytes": 894
+  },
+  {
+    "index": 26,
+    "id": "62-milvus-与检索参数",
+    "title": "6.2 Milvus 与检索参数",
+    "headingLevel": "H3",
+    "filename": "026_6.2 Milvus 与检索参数.md",
+    "sourceTextSha256": "8f1f74d1f50729122eebffc777c80da63f2ed8c3c22e602ae2605b7f5bb2ae02",
+    "markdownSha256": "9dfa30d7f11236b0b1f17d494f1b297f812cee25479b3438964c38c13680265d",
+    "bytes": 833
+  },
+  {
+    "index": 27,
+    "id": "63-langgraph-状态",
+    "title": "6.3 LangGraph 状态",
+    "headingLevel": "H3",
+    "filename": "027_6.3 LangGraph 状态.md",
+    "sourceTextSha256": "c6ca91b044c8796bedb99e499a424ce6b58a7b28f3993130885237db787c47d1",
+    "markdownSha256": "f2212aeacd047845a4232328a9e3c18d87dfd70e06098bf82f355045125ab4cb",
+    "bytes": 571
+  },
+  {
+    "index": 28,
+    "id": "64-在线图",
+    "title": "6.4 在线图",
+    "headingLevel": "H3",
+    "filename": "028_6.4 在线图.md",
+    "sourceTextSha256": "c3f24989eab54ddd4c4ca3c2192069e6eadc9a7fab68057818d108111776fbff",
+    "markdownSha256": "79f25cf3c5348ac22fc3f6f2f8b03303d17024a74806d0289372665de5e3f2da",
+    "bytes": 18689
+  },
+  {
+    "index": 29,
+    "id": "65-工程化-self-rag",
+    "title": "6.5 工程化 Self-RAG",
+    "headingLevel": "H3",
+    "filename": "029_6.5 工程化 Self-RAG.md",
+    "sourceTextSha256": "a49a1af8e6d975d397ae5a4408f7daadf037aa4e3e1a7c055c81e305d6e12958",
+    "markdownSha256": "2cbf86940df4adda0b626a7205733f825d68d65934e3f1fe8feec90dd7700e32",
+    "bytes": 705
+  },
+  {
+    "index": 30,
+    "id": "66-多轮问题",
+    "title": "6.6 多轮问题",
+    "headingLevel": "H3",
+    "filename": "030_6.6 多轮问题.md",
+    "sourceTextSha256": "d1ec236ca51611e9a33298fcfd2bdec4f3c575353b8afbc41397cd682a244e9d",
+    "markdownSha256": "dfbc42c7207b56afeadd1d68c8fc74d45dfa7900672bcc2f9e8d4c38291c1636",
+    "bytes": 510
+  },
+  {
+    "index": 31,
+    "id": "7-模拟评测体系",
+    "title": "7. 模拟评测体系",
+    "headingLevel": "H2",
+    "filename": "031_7. 模拟评测体系.md",
+    "sourceTextSha256": "64f52875e0073d9b068bcf3f4552531d1899d03e57074a32a06764d7c8ca645a",
+    "markdownSha256": "3d78a1ae5bf39764092d6205e1e5c650ea467e20a0c0f1640f502b34643974b9",
+    "bytes": 25
+  },
+  {
+    "index": 32,
+    "id": "71-golden-set",
+    "title": "7.1 Golden Set",
+    "headingLevel": "H3",
+    "filename": "032_7.1 Golden Set.md",
+    "sourceTextSha256": "b11ce1dd3e6ab885c40230b76c13a9e127e45c13abfd5fd0760a99a9ae1b392d",
+    "markdownSha256": "1096ffe49dd8ccdafdd692c581bf8fa90c6a5ef8ce55ecff5a4f12ec2c90e1de",
+    "bytes": 569
+  },
+  {
+    "index": 33,
+    "id": "72-消融实验",
+    "title": "7.2 消融实验",
+    "headingLevel": "H3",
+    "filename": "033_7.2 消融实验.md",
+    "sourceTextSha256": "3a77d7b751c98d9f6c1006bf8ee12e6113dfcfd9c64845bd18b0bbad7c532ad3",
+    "markdownSha256": "e8580c27a48a951fe37fcc259a0a2337e6041d5ceb18b4d818395553b480230a",
+    "bytes": 935
+  },
+  {
+    "index": 34,
+    "id": "73-引用与拒答",
+    "title": "7.3 引用与拒答",
+    "headingLevel": "H3",
+    "filename": "034_7.3 引用与拒答.md",
+    "sourceTextSha256": "143f64b23c492da0cb9dde540c154a5f2d9620b600f182d8bacd01f168204408",
+    "markdownSha256": "df1773c250b95457daa539c387940c692c788f2db10e4c4b6642aab6d0690b17",
+    "bytes": 330
+  },
+  {
+    "index": 35,
+    "id": "74-线上-ab",
+    "title": "7.4 线上 A/B",
+    "headingLevel": "H3",
+    "filename": "035_7.4 线上 A-B.md",
+    "sourceTextSha256": "6797578ef5811a1d7d7a85f85bf2dca4ce3244c9f56089487f4d49eebf4206ae",
+    "markdownSha256": "f548f998f94eaeeb1789b51fec9dc950ae625df8d78fc309f1b7beee7cd973b6",
+    "bytes": 552
+  },
+  {
+    "index": 36,
+    "id": "8-性能容量与降级",
+    "title": "8. 性能、容量与降级",
+    "headingLevel": "H2",
+    "filename": "036_8. 性能、容量与降级.md",
+    "sourceTextSha256": "cfde8deecea8a13e51763a9d547d7a16c88b9b81a10576597091765c8e91449b",
+    "markdownSha256": "8cf978ee2455bd949e087f7d69ce57343753703d69305d8522b8d294a796107b",
+    "bytes": 31
+  },
+  {
+    "index": 37,
+    "id": "81-延迟预算",
+    "title": "8.1 延迟预算",
+    "headingLevel": "H3",
+    "filename": "037_8.1 延迟预算.md",
+    "sourceTextSha256": "4a3bf5a6066f7149d1ce11f93c6958eac7a913e25ad219979f66f10446f5255e",
+    "markdownSha256": "498fa9e9ced51e5b5e566ea42210d8454c10f0a775871789e764882fcacd3c04",
+    "bytes": 492
+  },
+  {
+    "index": 38,
+    "id": "82-容量保护",
+    "title": "8.2 容量保护",
+    "headingLevel": "H3",
+    "filename": "038_8.2 容量保护.md",
+    "sourceTextSha256": "0697c0db04c9bbf0438a909fb8c00bb795b36438f4ef5524865b3978d84a3ebe",
+    "markdownSha256": "a8a4f8fd41432e73f0a0d11c25b983f50feafa3dc2f546c7bf302d38c3dc9025",
+    "bytes": 473
+  },
+  {
+    "index": 39,
+    "id": "83-降级矩阵",
+    "title": "8.3 降级矩阵",
+    "headingLevel": "H3",
+    "filename": "039_8.3 降级矩阵.md",
+    "sourceTextSha256": "58a0cc348b4c0f23ec55ac2066799ff28ce2cea84c702ff6db2ac86b67de980f",
+    "markdownSha256": "e2ea193201a10ee4681e79c7dba1249eab38cc6853acd3cf4aacf4a7be4c06d0",
+    "bytes": 587
+  },
+  {
+    "index": 40,
+    "id": "9-可观测性与-slo",
+    "title": "9. 可观测性与 SLO",
+    "headingLevel": "H2",
+    "filename": "040_9. 可观测性与 SLO.md",
+    "sourceTextSha256": "8beda0110d1e4d3eaa832fa3091665f64076730f8a721ccb1481b9e9e610d4a4",
+    "markdownSha256": "d1a09feadb7241650460cae7d55de2b4a02b2ea93268fba986fe271fb8abc278",
+    "bytes": 26
+  },
+  {
+    "index": 41,
+    "id": "91-统一-trace",
+    "title": "9.1 统一 Trace",
+    "headingLevel": "H3",
+    "filename": "041_9.1 统一 Trace.md",
+    "sourceTextSha256": "5dc9b1bdda32f26eef55ef111fc1abcc5dbbd4e342fb76484b35392348da9064",
+    "markdownSha256": "9a64f75de226e4af68e0add0dd6d8a5e91926e72338b003f82257d9d2858f014",
+    "bytes": 684
+  },
+  {
+    "index": 42,
+    "id": "92-slo",
+    "title": "9.2 SLO",
+    "headingLevel": "H3",
+    "filename": "042_9.2 SLO.md",
+    "sourceTextSha256": "6268887151defc8f3fd41e9d192bbe4f845ac3b4303f0d98dfb5a5dea1a6ccda",
+    "markdownSha256": "26fae7d97d6787c2d91afd49b08f2814b8deda4325ab4bf56a87978ce7be9d20",
+    "bytes": 327
+  },
+  {
+    "index": 43,
+    "id": "10-两个模拟事故",
+    "title": "10. 两个模拟事故",
+    "headingLevel": "H2",
+    "filename": "043_10. 两个模拟事故.md",
+    "sourceTextSha256": "187fcad8051a214cc2f769b87e8ae5eb19d7d385768d8b43ac4751e3e9d2eb10",
+    "markdownSha256": "d1787756da7823e1349dfed31dd520e8e16fddc57bd2d4489c5321ed72d7992d",
+    "bytes": 26
+  },
+  {
+    "index": 44,
+    "id": "101-事故一审批重复恢复",
+    "title": "10.1 事故一：审批重复恢复",
+    "headingLevel": "H3",
+    "filename": "044_10.1 事故一：审批重复恢复.md",
+    "sourceTextSha256": "af93cfaee125ce453b6be7d9405f5ac08a0a825ddc6de7d650491e1d5f765206",
+    "markdownSha256": "e662ada180ecb2bafe9396dbd3d69ce2889f091b01652d62bfe9aed7ef5a7414",
+    "bytes": 1363
+  },
+  {
+    "index": 45,
+    "id": "102-事故二旧版政策文档被引用",
+    "title": "10.2 事故二：旧版政策文档被引用",
+    "headingLevel": "H3",
+    "filename": "045_10.2 事故二：旧版政策文档被引用.md",
+    "sourceTextSha256": "37dca7d80e1a77faa3430a40bbd8e4f57a058c0cb6b845908e72c5cdc445d21e",
+    "markdownSha256": "294106af6cb1b0707e8d56802bc0f36ec391866214da14846df3a0850d346ab9",
+    "bytes": 1157
+  },
+  {
+    "index": 46,
+    "id": "11-模拟简历版本",
+    "title": "11. 模拟简历版本",
+    "headingLevel": "H2",
+    "filename": "046_11. 模拟简历版本.md",
+    "sourceTextSha256": "bd174d3d6d2f49216ed5e60e3c6452160c306fec21527de0961288290e67e1cd",
+    "markdownSha256": "5a667f8e08a4f96aac135b1a72b3205e1ddf8443a1b35888d48ad734fef5d04a",
+    "bytes": 1532
+  },
+  {
+    "index": 47,
+    "id": "12-模拟口述答案",
+    "title": "12. 模拟口述答案",
+    "headingLevel": "H2",
+    "filename": "047_12. 模拟口述答案.md",
+    "sourceTextSha256": "12fe144977264c9ac42fafcaf693b9fafeb9080d8cfde2fd94bc21d128f64e0e",
+    "markdownSha256": "35f4315b3a3382e05b499fdc3ed15a64aa72c5c54657ce66224ba89524936722",
+    "bytes": 26
+  },
+  {
+    "index": 48,
+    "id": "121-30-秒",
+    "title": "12.1 30 秒",
+    "headingLevel": "H3",
+    "filename": "048_12.1 30 秒.md",
+    "sourceTextSha256": "6b761ead3bb1f2953dadc95149e8b8cf34918197d91463d237067922e4d56b63",
+    "markdownSha256": "527fa617e0bc63f8a29f9b8f57ea209bda426f3ccd96ed4ae273e69f7127e7e8",
+    "bytes": 451
+  },
+  {
+    "index": 49,
+    "id": "122-三分钟",
+    "title": "12.2 三分钟",
+    "headingLevel": "H3",
+    "filename": "049_12.2 三分钟.md",
+    "sourceTextSha256": "c4ac6f90de5596ca694dcbe8d723c4320c65677964697c3ea4b51ae4d2e2c757",
+    "markdownSha256": "cad4cdcd36edeab9500a91c4141a6251d04b2a63769598d558d3dac51fd96d43",
+    "bytes": 1594
+  },
+  {
+    "index": 50,
+    "id": "13-45-题事实映射速查",
+    "title": "13. 45 题事实映射速查",
+    "headingLevel": "H2",
+    "filename": "050_13. 45 题事实映射速查.md",
+    "sourceTextSha256": "102b0ac24f095fd2a02df0ea9e6f94ed372121877cb109561236a54b720701e5",
+    "markdownSha256": "c2604333ed4f720e7879f400e40e339da4520d6a8f08a30767344a93db01e64e",
+    "bytes": 2295
+  },
+  {
+    "index": 51,
+    "id": "14-模拟证据包",
+    "title": "14. 模拟证据包",
+    "headingLevel": "H2",
+    "filename": "051_14. 模拟证据包.md",
+    "sourceTextSha256": "e6c4ea3165d0816625e031e3bd615e8844423f030565c6dd4455a960fea3c465",
+    "markdownSha256": "6ee3ac17d1e824d409d7dd7caf2e8337b7e8ed0ac96e4a82c9cf5beaf6d5d4ae",
+    "bytes": 860
+  },
+  {
+    "index": 52,
+    "id": "15-一致性检查清单",
+    "title": "15. 一致性检查清单",
+    "headingLevel": "H2",
+    "filename": "052_15. 一致性检查清单.md",
+    "sourceTextSha256": "07c41d8337a716e4abd623dd926e8e4348623af68ddbb69da8ec40aafc010a84",
+    "markdownSha256": "36f41aa11ce70c8f0adcb77bd29ebf967406f8ad1fc583bc44c39eaec0695011",
+    "bytes": 1079
+  }
+]

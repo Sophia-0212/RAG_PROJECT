@@ -1,21 +1,28 @@
-import os
+"""Backward-compatible access to the typed runtime settings.
 
-from dotenv import load_dotenv
+New code should import ``get_settings`` from ``rag_service.settings`` directly.
+The module-level aliases remain lazy so importing this module has no side effects.
+"""
 
-load_dotenv(override=True)
+from rag_service.settings import Settings, SettingsError, get_settings, reset_settings_cache
 
-os.environ.setdefault('HF_HUB_OFFLINE', '1')
+_ALIASES = {
+    "OPENAI_API_KEY": "openai_api_key",
+    "DEEPSEEK_API_KEY": "deepseek_api_key",
+    "TAVILY_API_KEY": "tavily_api_key",
+    "LANGFUSE_SECRET_KEY": "langfuse_secret_key",
+    "LANGFUSE_PUBLIC_KEY": "langfuse_public_key",
+    "LANGFUSE_BASE_URL": "langfuse_base_url",
+    "MILVUS_URI": "milvus_uri",
+    "COLLECTION_NAME": "collection_name",
+}
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
-TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
 
-LANGFUSE_SECRET_KEY = os.getenv('LANGFUSE_SECRET_KEY')
-LANGFUSE_PUBLIC_KEY = os.getenv('LANGFUSE_PUBLIC_KEY')
-LANGFUSE_BASE_URL = os.getenv('LANGFUSE_BASE_URL', 'http://localhost:3001')
-# langfuse SDK 读取的是 LANGFUSE_HOST，这里做一次别名映射
-os.environ.setdefault('LANGFUSE_HOST', LANGFUSE_BASE_URL)
+def __getattr__(name: str):
+    attribute = _ALIASES.get(name)
+    if attribute is None:
+        raise AttributeError(name)
+    return getattr(get_settings(), attribute)
 
-MILVUS_URI = os.getenv('MILVUS_URI', 'http://127.0.0.1:19530')
 
-COLLECTION_NAME = 't_collection01'
+__all__ = ["Settings", "SettingsError", "get_settings", "reset_settings_cache", *_ALIASES]

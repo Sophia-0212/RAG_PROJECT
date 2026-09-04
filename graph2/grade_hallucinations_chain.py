@@ -1,7 +1,9 @@
+from functools import lru_cache
+
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import Field, BaseModel
 
-from llm_models.all_llm import llm
+from llm_models.all_llm import get_llm
 
 
 # 数据模型 - 生成内容幻觉评分
@@ -13,9 +15,6 @@ class GradeHallucinations(BaseModel):
     )
 
 
-# 带函数调用的LLM初始化
-structured_llm_grader = llm.with_structured_output(GradeHallucinations)  # 绑定结构化输出到评分模型
-
 # 提示词模板
 system = """您是一个评估生成内容是否基于检索事实的评分器。\n
      给出'yes'或'no'的二元评分。'yes'表示回答是基于/支持于给定事实集的。"""
@@ -26,8 +25,11 @@ hallucination_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# 构建幻觉检测工作流
-hallucination_grader_chain = (
-        hallucination_prompt  # 使用幻觉检测提示模板
-        | structured_llm_grader  # 调用结构化评分的LLM
-)
+def build_hallucination_grader_chain(model):
+    structured_llm_grader = model.with_structured_output(GradeHallucinations)
+    return hallucination_prompt | structured_llm_grader
+
+
+@lru_cache(maxsize=1)
+def get_hallucination_grader_chain():
+    return build_hallucination_grader_chain(get_llm())

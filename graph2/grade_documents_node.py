@@ -1,8 +1,8 @@
-from graph2.grader_chain import retrieval_grader_chain
+from graph2.grader_chain import get_retrieval_grader_chain
 from utils.log_utils import log
 
 
-def grade_documents(state):
+def grade_documents(state, grader_chain=None):
     """
     评估检索到的文档与问题的相关性
 
@@ -18,8 +18,9 @@ def grade_documents(state):
 
     # 文档评分与过滤
     filtered_docs = []  # 初始化相关文档列表
+    grader_chain = grader_chain or get_retrieval_grader_chain()
     for d in documents:  # 遍历所有文档
-        score = retrieval_grader_chain.invoke(  # 调用评分器评估文档相关性
+        score = grader_chain.invoke(  # 调用评分器评估文档相关性
             {"question": question, "document": d.page_content}
         )
         grade = score.binary_score  # 获取二元评分结果
@@ -29,4 +30,14 @@ def grade_documents(state):
         else:  # 如果文档不相关
             log.info("---GRADE: 打印不相关标识,并丢掉doc---")  # 打印不相关标识
             continue  # 跳过当前文档
-    return {"documents": filtered_docs, "question": question}  # 返回仅含相关文档的状态
+    relevant_chunk_ids = {document.metadata.get("chunk_id") for document in filtered_docs}
+    candidates = [
+        candidate
+        for candidate in state.get("candidates", [])
+        if candidate.document.metadata.get("chunk_id") in relevant_chunk_ids
+    ]
+    return {
+        "documents": filtered_docs,
+        "candidates": candidates,
+        "question": question,
+    }  # 返回仅含相关文档的状态

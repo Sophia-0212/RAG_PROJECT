@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "rules": [
+    {"metric": "recall_at_5", "minimum": 0.80},
+    {"metric": "mrr", "minimum": 0.60},
+    {"metric": "citation_precision", "minimum": 0.90},
+    {"metric": "citation_recall", "minimum": 0.80},
+    {"metric": "refusal_accuracy", "minimum": 1.00},
+    {"metric": "acl_leakage_rate", "maximum": 0.00}
+  ]
+}

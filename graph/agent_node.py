@@ -1,6 +1,6 @@
 from graph.graph_state1 import AgentState
-from llm_models.all_llm import llm
-from tools.retriever_tools import retriever_tool
+from llm_models.all_llm import get_llm
+from tools.retriever_tools import get_retriever_tool
 from utils.log_utils import log
 
 
@@ -19,7 +19,8 @@ def agent_node(state: AgentState):
     log.info("---开始进入工作流---")
     messages = state["messages"]
 
-    model = llm.bind_tools([retriever_tool])
+    retriever_tool = get_retriever_tool()
+    model = get_llm().bind_tools([retriever_tool])
     response = model.invoke([messages[-1]])
     # 返回列表，因为这会添加到现有列表中
     return {"messages": [response]}

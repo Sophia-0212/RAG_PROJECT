@@ -3,7 +3,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from graph.get_human_message import get_last_human_message
-from llm_models.all_llm import llm
+from llm_models.all_llm import get_llm
 from utils.log_utils import log
 
 
@@ -30,7 +30,7 @@ def generate(state):
         input_variables=["question", "context"],
     )
     # 处理链
-    rag_chain = prompt | llm | StrOutputParser()
+    rag_chain = prompt | get_llm() | StrOutputParser()
     # 执行
     response = rag_chain.invoke({"context": docs, "question": question})
     ai_message = AIMessage(content=response)

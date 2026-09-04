@@ -1,0 +1,42 @@
+services:
+  rag-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: rag-enterprise-service:0.1.0
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${RAG_API_PORT:-8000}:8000"
+    environment:
+      RAG_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      RAG_GATEWAY_SHARED_SECRET: ${RAG_GATEWAY_SHARED_SECRET:?RAG_GATEWAY_SHARED_SECRET is required}
+      MILVUS_URI: ${MILVUS_URI:?MILVUS_URI is required}
+      RAG_COLLECTION_NAME: ${RAG_COLLECTION_NAME:?RAG_COLLECTION_NAME is required}
+      RAG_LLM_MODEL: ${RAG_LLM_MODEL:-gpt-5.5}
+      RAG_LLM_BASE_URL: ${RAG_LLM_BASE_URL:?RAG_LLM_BASE_URL is required}
+      RAG_RERANKER_MODEL: ${RAG_RERANKER_MODEL:-BAAI/bge-reranker-base}
+      RAG_CHECKPOINT_PATH: /var/lib/rag/checkpoints.sqlite3
+      LANGGRAPH_STRICT_MSGPACK: "true"
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-true}
+      HF_HOME: /models
+    volumes:
+      - rag_state:/var/lib/rag
+      - ${RAG_MODEL_CACHE_PATH:?RAG_MODEL_CACHE_PATH is required}:/models:ro
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2).read()"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  rag_state:

@@ -1,19 +1,34 @@
+from functools import lru_cache
+
 from langchain_community.tools import TavilySearchResults
 from langchain_openai import ChatOpenAI
 
-from utils.env_utils import OPENAI_API_KEY, DEEPSEEK_API_KEY, TAVILY_API_KEY
-
-llm = ChatOpenAI(  # Ducc 内部网关
-    temperature=0,
-    model='gpt-5.5',
-    api_key=OPENAI_API_KEY,
-    base_url="https://oneapi-comate.baidu-int.com/v1")
+from rag_service.settings import get_settings
 
 
-web_search_tool = TavilySearchResults(max_results=2, tavily_api_key=TAVILY_API_KEY or "placeholder")
+@lru_cache(maxsize=1)
+def get_llm() -> ChatOpenAI:
+    """Create the configured chat model on first use."""
+    settings = get_settings()
+    settings.require_llm()
+    return ChatOpenAI(
+        temperature=0,
+        model=settings.llm_model,
+        api_key=settings.openai_api_key,
+        base_url=settings.llm_base_url,
+        timeout=settings.llm_timeout_seconds,
+        max_retries=0,
+    )
 
-# llm = ChatOpenAI(
-#     temperature=0.5,
-#     model='deepseek-chat',
-#     api_key=DEEPSEEK_API_KEY,
-#     base_url="https://api.deepseek.com")
+
+@lru_cache(maxsize=1)
+def get_web_search_tool() -> TavilySearchResults:
+    """Create the external-search client on first use."""
+    settings = get_settings()
+    settings.require_web_search()
+    return TavilySearchResults(max_results=2, tavily_api_key=settings.tavily_api_key)
+
+
+def reset_model_caches() -> None:
+    get_llm.cache_clear()
+    get_web_search_tool.cache_clear()

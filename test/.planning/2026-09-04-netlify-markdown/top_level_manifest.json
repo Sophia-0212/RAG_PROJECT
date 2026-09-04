@@ -1,0 +1,197 @@
+[
+  {
+    "filename": "001_0. 模拟人物与时间线.md",
+    "title": "0. 模拟人物与时间线",
+    "sourceFiles": [
+      "002_0. 模拟人物与时间线.md",
+      "003_0.1 五年级别的准确定位.md",
+      "004_0.2 模拟个人职责.md"
+    ],
+    "childCount": 2,
+    "bytes": 1681,
+    "sha256": "294ace99725c0d11014ce40a6f20c87e3eca2dc6d2df626713547010ed2f8a2e"
+  },
+  {
+    "filename": "002_1. 模拟业务背景与结果总览.md",
+    "title": "1. 模拟业务背景与结果总览",
+    "sourceFiles": [
+      "005_1. 模拟业务背景与结果总览.md",
+      "006_1.1 业务问题.md",
+      "007_1.2 模拟规模.md",
+      "008_1.3 模拟结果.md"
+    ],
+    "childCount": 3,
+    "bytes": 1883,
+    "sha256": "8df1b642c13b04417346ea5cd84da198660c25b6d3f268279f7e93d9f02ef7ec"
+  },
+  {
+    "filename": "003_2. 模拟总体架构.md",
+    "title": "2. 模拟总体架构",
+    "sourceFiles": [
+      "009_2. 模拟总体架构.md"
+    ],
+    "childCount": 0,
+    "bytes": 1532,
+    "sha256": "e416055d689a27b844e231cb13f3794498efdbcef1bdf0b711f049d1dc08c5a2"
+  },
+  {
+    "filename": "004_3. ONECRM 客户档案模拟实现.md",
+    "title": "3. ONECRM 客户档案模拟实现",
+    "sourceFiles": [
+      "010_3. ONECRM 客户档案模拟实现.md",
+      "011_3.1 数据模型.md",
+      "012_3.2 关键不变量.md",
+      "013_3.3 模拟稳定性数据.md"
+    ],
+    "childCount": 3,
+    "bytes": 1493,
+    "sha256": "d7a45d31ed6d8d5f5b6c380a9347456d11d3ea4a7acca02ea6ead24442a7d326"
+  },
+  {
+    "filename": "005_4. Dify 二次开发模拟实现.md",
+    "title": "4. Dify 二次开发模拟实现",
+    "sourceFiles": [
+      "014_4. Dify 二次开发模拟实现.md",
+      "015_4.1 版本与改动边界.md",
+      "016_4.2 权限模型.md",
+      "017_4.3 鉴权改造成果.md"
+    ],
+    "childCount": 3,
+    "bytes": 1976,
+    "sha256": "fcf1211f4bd1e1d6961ca6755deee0786082a9e8e0a67dddb125f28a7dbc2f2b"
+  },
+  {
+    "filename": "006_5. HITL 审批节点模拟实现.md",
+    "title": "5. HITL 审批节点模拟实现",
+    "sourceFiles": [
+      "018_5. HITL 审批节点模拟实现.md",
+      "019_5.1 使用场景.md",
+      "020_5.2 状态机.md",
+      "021_5.3 核心数据.md",
+      "022_5.4 暂停与恢复时序.md",
+      "023_5.5 模拟运行指标.md"
+    ],
+    "childCount": 5,
+    "bytes": 2817,
+    "sha256": "02f3132bde8c06bbe7b9abb47a0614ea2142c0ed95e146fda15338fb8b49dd35"
+  },
+  {
+    "filename": "007_6. LangGraph RAG 模拟实现.md",
+    "title": "6. LangGraph RAG 模拟实现",
+    "sourceFiles": [
+      "024_6. LangGraph RAG 模拟实现.md",
+      "025_6.1 知识入库.md",
+      "026_6.2 Milvus 与检索参数.md",
+      "027_6.3 LangGraph 状态.md",
+      "028_6.4 在线图.md",
+      "029_6.5 工程化 Self-RAG.md",
+      "030_6.6 多轮问题.md"
+    ],
+    "childCount": 6,
+    "bytes": 22241,
+    "sha256": "e93e79eee759ce920b5fde7f4fd2c4d3b2c2a90929b77093d7624d1e8cccdccf"
+  },
+  {
+    "filename": "008_7. 模拟评测体系.md",
+    "title": "7. 模拟评测体系",
+    "sourceFiles": [
+      "031_7. 模拟评测体系.md",
+      "032_7.1 Golden Set.md",
+      "033_7.2 消融实验.md",
+      "034_7.3 引用与拒答.md",
+      "035_7.4 线上 A-B.md"
+    ],
+    "childCount": 4,
+    "bytes": 2415,
+    "sha256": "c1ccd107bc3319a68c6a78be1dbdecfa61c1163f851c14ee46853ddac73e4b29"
+  },
+  {
+    "filename": "009_8. 性能、容量与降级.md",
+    "title": "8. 性能、容量与降级",
+    "sourceFiles": [
+      "036_8. 性能、容量与降级.md",
+      "037_8.1 延迟预算.md",
+      "038_8.2 容量保护.md",
+      "039_8.3 降级矩阵.md"
+    ],
+    "childCount": 3,
+    "bytes": 1586,
+    "sha256": "ee6257b3d2883854e3f7c4773cf9fcb32ce6570ea940002c2a0ff1de56541246"
+  },
+  {
+    "filename": "010_9. 可观测性与 SLO.md",
+    "title": "9. 可观测性与 SLO",
+    "sourceFiles": [
+      "040_9. 可观测性与 SLO.md",
+      "041_9.1 统一 Trace.md",
+      "042_9.2 SLO.md"
+    ],
+    "childCount": 2,
+    "bytes": 1039,
+    "sha256": "1f53520402992e0fbca9f545a03cb5b5f106cf2a9ff2ca00cd35e2f4f700660b"
+  },
+  {
+    "filename": "011_10. 两个模拟事故.md",
+    "title": "10. 两个模拟事故",
+    "sourceFiles": [
+      "043_10. 两个模拟事故.md",
+      "044_10.1 事故一：审批重复恢复.md",
+      "045_10.2 事故二：旧版政策文档被引用.md"
+    ],
+    "childCount": 2,
+    "bytes": 2548,
+    "sha256": "f1656e62f4d29b9fe988519bc832cbe0278d2f6c27691eaae53170c9514be186"
+  },
+  {
+    "filename": "012_11. 模拟简历版本.md",
+    "title": "11. 模拟简历版本",
+    "sourceFiles": [
+      "046_11. 模拟简历版本.md"
+    ],
+    "childCount": 0,
+    "bytes": 1532,
+    "sha256": "5a667f8e08a4f96aac135b1a72b3205e1ddf8443a1b35888d48ad734fef5d04a"
+  },
+  {
+    "filename": "013_12. 模拟口述答案.md",
+    "title": "12. 模拟口述答案",
+    "sourceFiles": [
+      "047_12. 模拟口述答案.md",
+      "048_12.1 30 秒.md",
+      "049_12.2 三分钟.md"
+    ],
+    "childCount": 2,
+    "bytes": 2073,
+    "sha256": "bc76a82beabd554e4d4076ce16489d9d8e06b5f8e2b800f91f1d0be1f657f993"
+  },
+  {
+    "filename": "014_13. 45 题事实映射速查.md",
+    "title": "13. 45 题事实映射速查",
+    "sourceFiles": [
+      "050_13. 45 题事实映射速查.md"
+    ],
+    "childCount": 0,
+    "bytes": 2295,
+    "sha256": "c2604333ed4f720e7879f400e40e339da4520d6a8f08a30767344a93db01e64e"
+  },
+  {
+    "filename": "015_14. 模拟证据包.md",
+    "title": "14. 模拟证据包",
+    "sourceFiles": [
+      "051_14. 模拟证据包.md"
+    ],
+    "childCount": 0,
+    "bytes": 860,
+    "sha256": "6ee3ac17d1e824d409d7dd7caf2e8337b7e8ed0ac96e4a82c9cf5beaf6d5d4ae"
+  },
+  {
+    "filename": "016_15. 一致性检查清单.md",
+    "title": "15. 一致性检查清单",
+    "sourceFiles": [
+      "052_15. 一致性检查清单.md"
+    ],
+    "childCount": 0,
+    "bytes": 1079,
+    "sha256": "36f41aa11ce70c8f0adcb77bd29ebf967406f8ad1fc583bc44c39eaec0695011"
+  }
+]

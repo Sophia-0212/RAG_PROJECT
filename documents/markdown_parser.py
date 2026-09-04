@@ -1,7 +1,8 @@
-from typing import List
+from typing import Any, List
 from langchain_experimental.text_splitter import SemanticChunker
 
-from llm_models.embeddings_model import openai_embedding
+from llm_models.embeddings_model import get_openai_embedding
+from documents.governance import SourceDocument, govern_chunks
 from utils.log_utils import log
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain_core.documents import Document
@@ -11,15 +12,24 @@ class MarkdownParser:
     """
     专门负责markdown文件的解析和切片
     """
-    def __init__(self):
-        self.text_splitter = SemanticChunker(
-            openai_embedding, breakpoint_threshold_type="percentile"
-        )
+    def __init__(self, text_splitter: Any = None, semantic_chunk_min_chars: int = 5000):
+        self._text_splitter = text_splitter
+        self.semantic_chunk_min_chars = semantic_chunk_min_chars
+
+    @property
+    def text_splitter(self):
+        if self._text_splitter is None:
+            self._text_splitter = SemanticChunker(
+                get_openai_embedding(),
+                breakpoint_threshold_type="percentile",
+                sentence_split_regex=r"(?<=[。？！.?!])\s*",
+            )
+        return self._text_splitter
 
     def text_chunker(self, datas: List[Document]) -> List[Document]:
         new_docs = []
         for d in datas:
-            if len(d.page_content) > 5000:  # 内容超出了阈值，则按照语义再切割
+            if len(d.page_content) > self.semantic_chunk_min_chars:  # 内容超出了阈值，则按照语义再切割
                 new_docs.extend(self.text_splitter.split_documents([d]))
                 continue
             new_docs.append(d)
@@ -37,6 +47,23 @@ class MarkdownParser:
         chunk_documents = self.text_chunker(merged_documents)
         log.info(f'语义切割后的长度: {len(chunk_documents)}')
         return chunk_documents
+
+    def parse_governed_markdown(
+        self,
+        md_file: str,
+        source: SourceDocument,
+        *,
+        ingestion_run_id: str,
+        chunker_version: str,
+    ) -> List[Document]:
+        """Parse Markdown and attach stable enterprise-governance metadata."""
+        chunks = self.parse_markdown_to_documents(md_file)
+        return govern_chunks(
+            source,
+            chunks,
+            ingestion_run_id=ingestion_run_id,
+            chunker_version=chunker_version,
+        )
 
     def parse_markdown(self, md_file: str) -> List[Document]:
         loader = UnstructuredMarkdownLoader(

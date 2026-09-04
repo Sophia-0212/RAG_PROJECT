@@ -1,7 +1,9 @@
+from functools import lru_cache
+
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from llm_models.all_llm import llm
+from llm_models.all_llm import get_llm
 
 
 # 数据模型 - 文档相关性评分
@@ -12,9 +14,6 @@ class GradeDocuments(BaseModel):
         description="文档是否与问题相关，取值为'yes'或'no'"
     )
 
-
-# 带函数调用的LLM初始化
-structured_llm_grader = llm.with_structured_output(GradeDocuments)  # 绑定结构化输出到评分模型
 
 # 提示词模板
 system = """你是一个评估检索文档与用户问题相关性的评分器。\n 
@@ -28,5 +27,11 @@ grade_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# 构建检索评分器工作流
-retrieval_grader_chain = grade_prompt | structured_llm_grader  # 组合提示模板和LLM评分器
+def build_retrieval_grader_chain(model):
+    structured_llm_grader = model.with_structured_output(GradeDocuments)
+    return grade_prompt | structured_llm_grader
+
+
+@lru_cache(maxsize=1)
+def get_retrieval_grader_chain():
+    return build_retrieval_grader_chain(get_llm())

@@ -1,22 +1,19 @@
-import uuid
-from typing import Literal, List
+from typing import Literal
 
-from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
-from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
-from draw_png import draw_graph
 from graph.agent_node import agent_node
 from graph.generate_node import generate
 from graph.get_human_message import get_last_human_message
 from graph.graph_state1 import AgentState, Grade
 from graph.rewrite_node import rewrite
-from llm_models.all_llm import llm
-from tools.retriever_tools import retriever_tool
+from llm_models.all_llm import get_llm
+from tools.reranker_tools import rerank_documents
+from tools.retriever_tools import get_retriever_tool
 from utils.log_utils import log
 from utils.print_utils import _print_event
 
@@ -25,15 +22,15 @@ from utils.print_utils import _print_event
 
 def grade_documents(state) -> Literal["generate", "rewrite"]:
     """
-    判断检索到的文档是否与问题相关。
+    对检索到的文档做rerank精排+逐篇相关性打分，判断是否有文档与问题相关。
     参数:
         state (messages): 当前状态
     返回:
-        str: 判断结果，文档是否相关
+        str: 判断结果，是否存在相关文档
     """
     log.info("---检查document的相关性---")
     #  带结构化输出的LLM
-    llm_with_structured = llm.with_structured_output(Grade)
+    llm_with_structured = get_llm().with_structured_output(Grade)
 
     # 提示模板
     prompt = PromptTemplate(
@@ -52,84 +49,69 @@ def grade_documents(state) -> Literal["generate", "rewrite"]:
     last_message = messages[-1]
 
     question = get_last_human_message(messages).content
-    docs = last_message.content
+    documents = last_message.artifact  # ToolNode(response_format='content_and_artifact')回填的原始Document列表
 
-    scored_result = chain.invoke({"question": question, "context": docs})
+    # Rerank精排，取top4
+    reranked_docs = rerank_documents(question, documents, top_n=4)
 
-    score = scored_result.binary_score
+    # 逐篇相关性评估，不相关的丢掉
+    relevant_docs = []
+    for doc in reranked_docs:
+        scored_result = chain.invoke({"question": question, "context": doc.page_content})
+        if scored_result.binary_score == "yes":
+            relevant_docs.append(doc)
 
-    if score == "yes":
-        print("---输出：文档相关---")
+    if relevant_docs:
+        log.info(f"---输出：{len(relevant_docs)}篇文档相关---")
+        last_message.content = "\n\n".join(doc.page_content for doc in relevant_docs)
         return "generate"
-
     else:
-        print("---输出：文档不相关---")
-        print(score)
+        log.info("---输出：文档不相关---")
         return "rewrite"
 
-# 定义一个新的工作流图
-workflow = StateGraph(AgentState)
+def build_graph():
+    """Build the legacy Graph 1 demo without running it during import."""
+    workflow = StateGraph(AgentState)
+    workflow.add_node("agent", agent_node)
+    workflow.add_node("retrieve", ToolNode([get_retriever_tool()]))
+    workflow.add_node("rewrite", rewrite)
+    workflow.add_node("generate", generate)
 
-# 添加节点
-workflow.add_node('agent', agent_node)
-workflow.add_node('retrieve', ToolNode([retriever_tool]))
-workflow.add_node('rewrite', rewrite)
-workflow.add_node('generate', generate)
+    workflow.add_edge(START, "agent")
+    workflow.add_conditional_edges(
+        "agent",
+        tools_condition,
+        {"tools": "retrieve", END: END},
+    )
+    workflow.add_conditional_edges("retrieve", grade_documents)
+    workflow.add_edge("rewrite", "agent")
+    workflow.add_edge("generate", END)
+    return workflow.compile(checkpointer=MemorySaver())
 
-workflow.add_edge(START, 'agent')
-workflow.add_conditional_edges(
-    'agent',
-    tools_condition,
-    {
-        'tools': 'retrieve',
-        END: END
+
+def run_cli() -> None:
+    import uuid
+
+    from langfuse.langchain import CallbackHandler
+
+    graph = build_graph()
+    thread_id = str(uuid.uuid4())
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "callbacks": [CallbackHandler()],
+        "metadata": {"langfuse_session_id": thread_id, "langfuse_tags": ["graph1"]},
     }
-)
+    printed = set()
 
-workflow.add_conditional_edges(
-    'retrieve',
-    grade_documents,
-)
-
-workflow.add_edge('rewrite', 'agent')
-workflow.add_edge('generate', END)
-
-
-# 检查点让状态图可以持久化其状态
-# 这是整个状态图的完整内存
-memory = MemorySaver()
-
-# 编译状态图，配置检查点为memory, 配置中断点
-graph = workflow.compile(checkpointer=memory)
+    while True:
+        question = input("用户：")
+        if question.lower() in {"q", "exit", "quit"}:
+            log.info("对话结束，拜拜！")
+            break
+        inputs = {"messages": [("user", question)]}
+        for event in graph.stream(inputs, config=config, stream_mode="values"):
+            _print_event(event, printed)
 
 
-# draw_graph(graph, 'graph_rag1-2.png')
-thread_id = str(uuid.uuid4())
-langfuse_handler = CallbackHandler()
-config = {
-    "configurable": {
-        # 检查点由session_id访问
-        "thread_id": thread_id,
-    },
-    "callbacks": [langfuse_handler],
-    "metadata": {"langfuse_session_id": thread_id, "langfuse_tags": ["graph1"]},
-}
-
-_printed = set()  # set集合，避免重复打印
-
-# 执行工作流
-while True:
-    question = input('用户：')
-    if question.lower() in ['q', 'exit', 'quit']:
-        log.info('对话结束，拜拜！')
-        break
-    else:
-        inputs = {
-            "messages": [
-                ("user", question),
-            ]
-        }
-        events = graph.stream(inputs, config=config, stream_mode='values')
-        # 打印消息
-        for event in events:
-            _print_event(event, _printed)
+if __name__ == "__main__":
+    run_cli()

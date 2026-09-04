@@ -9,3 +9,6 @@ langfuse/volumes/
 .idea/
 logs/
 *.log
+.rag-state/
+build/
+*.egg-info/

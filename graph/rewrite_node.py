@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage
 
 from graph.get_human_message import get_last_human_message
-from llm_models.all_llm import llm
+from llm_models.all_llm import get_llm
 from utils.log_utils import log
 
 
@@ -32,5 +32,5 @@ def rewrite(state):
     ]
 
     # 评分模型
-    response = llm.invoke(msg)
+    response = get_llm().invoke(msg)
     return {"messages": [response]}

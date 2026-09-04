@@ -1,7 +1,9 @@
+from functools import lru_cache
+
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import Field, BaseModel
 
-from llm_models.all_llm import llm
+from llm_models.all_llm import get_llm
 
 
 # 数据模型 - 回答质量评分
@@ -13,9 +15,6 @@ class GradeAnswer(BaseModel):
     )
 
 
-# 初始化带函数调用的LLM
-structured_llm_grader = llm.with_structured_output(GradeAnswer)  # 绑定结构化输出到评分模型
-
 # 提示词模板
 system = """您是一个评估回答是否解决用户问题的评分器。\n
      给出'yes'或'no'的二元评分。'yes'表示:回答确实解决了该问题。"""
@@ -26,8 +25,11 @@ answer_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# 构建回答质量评估工作流
-answer_grader_chain = (
-        answer_prompt  # 使用回答评估提示模板
-        | structured_llm_grader  # 调用结构化评分的LLM
-)
+def build_answer_grader_chain(model):
+    structured_llm_grader = model.with_structured_output(GradeAnswer)
+    return answer_prompt | structured_llm_grader
+
+
+@lru_cache(maxsize=1)
+def get_answer_grader_chain():
+    return build_answer_grader_chain(get_llm())

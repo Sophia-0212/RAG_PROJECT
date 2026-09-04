@@ -1,0 +1,20 @@
+# Production query-service dependencies. Ingestion-only packages remain in requirements.lock.
+# Docker installs the pinned CPU torch wheel from the official PyTorch index first.
+torch==2.9.1
+fastapi==0.141.1
+langchain-community==0.4.2
+langchain-core==1.6.0
+langchain-huggingface==1.2.2
+# langchain-milvus==0.4.0 is installed with --no-deps in Docker because its
+# milvus-lite dependency is not used by the production remote-Milvus profile.
+langchain-openai==1.6.0
+langgraph==1.2.11
+langgraph-checkpoint-sqlite==3.1.1
+loguru==0.7.3
+pydantic==2.13.4
+prometheus-client==0.26.0
+pymilvus==3.0.1
+python-dotenv==1.2.3
+sentence-transformers==6.0.0
+tiktoken==0.14.0
+uvicorn==0.52.4
