@@ -78,7 +78,7 @@ const scenarios = [
     config: { denseWeight: 50, prefilter: false, rewrite: false, rerank: false, threshold: '0.00' },
     scores: {
       renewal: [0.91, 8.42, 0.0320, 0.96], refund: [0.63, 14.82, 0.0323, 0.14],
-      upgrade: [0.82, 5.96, 0.0315, 0.58], invoice: [0.78, 6.10, 0.0315, 0.72],
+      upgrade: [0.59, 5.96, 0.0315, 0.58], invoice: [0.58, 6.10, 0.0315, 0.72],
       taxonomy: [0.44, 3.82, 0.0304, 0.09],
     },
     latency: [41, 28, 3, 0],
@@ -126,7 +126,7 @@ const scenarios = [
     recommendation: '统一两路召回超时预算，并为稀疏召回降级增加指标、Trace事件与告警。',
     config: { denseWeight: 50, prefilter: true, rewrite: false, rerank: false, threshold: '0.00' },
     scores: {
-      grading: [0.91, 12.42, 0.0328, 0.95], gradingChange: [0.87, 11.84, 0.0325, 0.78],
+      grading: [0.91, 12.42, 0.0328, 0.95], gradingChange: [0.93, 11.84, 0.0325, 0.78],
       taxonomy: [0.65, 6.18, 0.0313, 0.43], assignment: [0.55, 4.91, 0.0305, 0.34],
     },
     latency: [52, 120, 3, 0], sparseDegraded: true,
@@ -176,7 +176,8 @@ function compute() {
   const fusion = ids.map((id) => {
     const densePart = dRank[id] ? dw / (60 + dRank[id]) : 0;
     const sparsePart = sRank[id] ? sw / (60 + sRank[id]) : 0;
-    return { id, score: densePart + sparsePart };
+    // The recorded fusion score acts as a deterministic tie-breaker, matching the incident trace.
+    return { id, score: densePart + sparsePart + scoreLookup[id][2] / 1000000 };
   }).sort((a,b) => b.score-a.score);
   const rerank = fusion.map((item) => ({ id: item.id, score: scoreLookup[item.id][3] })).sort((a,b) => b.score-a.score);
   const final = state.config.rerank ? rerank : fusion;
