@@ -1,0 +1,91 @@
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.panel.full { grid-column: 1 / -1; }
+.panel h2 {
+  font-size: 13px;
+  color: #e6edf3;
+  margin: 0 0 4px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel h2 .metric-name {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: normal;
+}
+.panel .desc { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+canvas { width: 100%; display: block; cursor: crosshair; }
+.chart-wrap { position: relative; }
+.chart-tooltip {
+  position: absolute;
+  display: none;
+  background: #1c2128;
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 40;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+.chart-tooltip .t-time { color: var(--muted); margin-bottom: 3px; }
+.chart-tooltip .t-row { display: flex; align-items: center; gap: 6px; }
+.chart-tooltip .t-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.crosshair-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(139, 148, 158, 0.4);
+  pointer-events: none;
+  display: none;
+}
+
+.legend { display: flex; gap: 14px; font-size: 11px; margin-top: 8px; flex-wrap: wrap; }
+.legend .item { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+.legend .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+.incident-banner {
+  background: rgba(248, 81, 73, 0.12);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: #ffb3ad;
+  display: none;
+}
+.incident-banner.show { display: block; }
+#outage-banner {
+  background: rgba(188, 140, 255, 0.12);
+  border-color: var(--purple);
+  color: #d9bfff;
+}
+
+.footer-note {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.footer-note code {
+  background: #21262d;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--blue);
+}

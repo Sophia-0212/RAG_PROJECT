@@ -50,6 +50,25 @@ class QueryResponse(ApiModel):
     component_versions: dict[str, str] = Field(default_factory=dict)
 
 
+class RequestAcceptedResponse(ApiModel):
+    request_id: str
+    status: str
+    status_url: str
+
+
+class RequestStatusResponse(ApiModel):
+    request_id: str
+    conversation_id: str
+    status: str
+    attempt_count: int
+    max_attempts: int
+    submitted_at_ms: int
+    updated_at_ms: int
+    completed_at_ms: int | None = None
+    error_category: str | None = None
+    result: QueryResponse | None = None
+
+
 class ErrorDetail(ApiModel):
     code: str
     message: str

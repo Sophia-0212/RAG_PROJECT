@@ -1,0 +1,170 @@
+:root {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --border: #2a2f3a;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --green: #3fb950;
+  --red: #f85149;
+  --orange: #d29922;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "SF Mono", Consolas, Menlo, monospace;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ===== 左侧场景侧边栏 ===== */
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 18px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-title {
+  color: #e6edf3;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sidebar-subtitle {
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.scenario-group-label {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 16px 0 6px 4px;
+}
+.scenario-group-label:first-of-type { margin-top: 4px; }
+.scenario-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.scenario-item:hover { background: #1c2128; border-color: var(--border); }
+.scenario-item.active {
+  background: rgba(210, 153, 34, 0.1);
+  border-color: var(--orange);
+  color: var(--orange);
+  font-weight: 600;
+}
+.scenario-item .dot-status {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 7px;
+  background: var(--muted);
+}
+.scenario-item.active .dot-status {
+  background: var(--orange);
+  box-shadow: 0 0 0 3px rgba(210, 153, 34, 0.2);
+}
+.scenario-item[data-severity="ok"].active { background: rgba(63,185,80,0.1); border-color: var(--green); color: var(--green); }
+.scenario-item[data-severity="ok"].active .dot-status { background: var(--green); box-shadow: 0 0 0 3px rgba(63,185,80,0.2); }
+.scenario-item[data-severity="warn"].active { background: rgba(210,153,34,0.1); border-color: var(--orange); color: var(--orange); }
+.scenario-item[data-severity="warn"].active .dot-status { background: var(--orange); box-shadow: 0 0 0 3px rgba(210,153,34,0.2); }
+.scenario-item[data-severity="danger"].active { background: rgba(248,81,73,0.1); border-color: var(--red); color: var(--red); }
+.scenario-item[data-severity="danger"].active .dot-status { background: var(--red); box-shadow: 0 0 0 3px rgba(248,81,73,0.2); }
+.scenario-item .item-desc { display: block; color: var(--muted); font-size: 10px; font-weight: normal; margin-top: 2px; line-height: 1.4; }
+.scenario-item.active .item-desc { color: inherit; opacity: 0.75; }
+
+/* ===== 场景周期进度读数：按钮下方的固定位置数字，不需要动画（动画留给图表浮动说明） ===== */
+.scenario-item .scenario-progress {
+  display: none;
+  margin-top: 3px;
+  font-size: 9px;
+  font-family: "SF Mono", Consolas, monospace;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+.scenario-item .scenario-progress.show { display: block; }
+.scenario-item.active .scenario-progress { color: inherit; opacity: 0.8; }
+
+.sidebar-footer-hint {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.sidebar-footer-hint code {
+  background: #21262d;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--blue);
+  font-size: 9px;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  min-width: 0;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+header h1 {
+  font-size: 18px;
+  margin: 0;
+  color: #e6edf3;
+}
+header h1 .tag {
+  color: var(--orange);
+  font-size: 12px;
+  border: 1px solid var(--orange);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.subtitle { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.clock { color: var(--muted); font-size: 13px; text-align: right; }
+.clock .live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 6px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}

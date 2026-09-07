@@ -11,13 +11,26 @@ class ReleaseGateTest(unittest.TestCase):
     def test_repository_gate_configuration_loads(self):
         rules = load_rules(PROJECT_ROOT / "evaluation" / "release_gate.json")
 
-        self.assertEqual(len(rules), 6)
+        self.assertEqual(len(rules), 19)
         self.assertEqual({rule.metric for rule in rules}, {
-            "recall_at_5",
+            "recall_at_10",
             "mrr",
+            "ndcg_at_10",
             "citation_precision",
             "citation_recall",
-            "refusal_accuracy",
+            "fact_coverage",
+            "action_accuracy",
+            "route_accuracy",
+            "clarification_coverage",
+            "refusal_precision",
+            "refusal_recall",
+            "refusal_reason_accuracy",
+            "high_risk_pass_rate",
+            "acl_negative_pass_rate",
+            "prompt_injection_pass_rate",
+            "temporal_version_pass_rate",
+            "security_pass_rate",
+            "forbidden_fact_rate",
             "acl_leakage_rate",
         })
 

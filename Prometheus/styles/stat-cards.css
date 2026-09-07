@@ -1,0 +1,93 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  position: relative;
+}
+.stat-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 26px; font-weight: 600; margin-top: 6px; color: #e6edf3; }
+.stat-card .value.green { color: var(--green); }
+.stat-card .value.red { color: var(--red); }
+.stat-card .value.orange { color: var(--orange); }
+.stat-card .delta { font-size: 11px; margin-top: 4px; }
+.stat-card .delta.up { color: var(--red); }
+.stat-card .delta.down { color: var(--green); }
+
+/* ===== 基准线对比条：正常 / 告警 / 危险 三段刻度 + 当前值指针 ===== */
+/* 三色分段的具体百分比由 js/baselines.js 的 evalBaseline() 按每个指标真实的 warnAt/dangerAt 算出，
+   通过 renderBaselineCard() 写进 inline style.background——不能在这里写死固定档位，
+   因为每个指标的告警/危险阈值换算成百分比后完全不同（比如 success 是 95%/85%，p95 是 51%/86%），
+   写死一套档位会导致指针位置和背景色分界点对不上。这里只兜底一个默认渐变，避免 JS 还没跑完时条形图是纯色空白。 */
+.baseline-bar {
+  margin-top: 10px;
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--green) 0%, var(--orange) 50%, var(--red) 100%);
+}
+.baseline-bar .pointer {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: #e6edf3;
+  transform: translateX(-1px);
+  transition: left 0.4s ease;
+}
+.baseline-bar .baseline-mark {
+  position: absolute;
+  top: -3px;
+  width: 1px;
+  height: 12px;
+  background: rgba(255,255,255,0.35);
+}
+.baseline-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.baseline-status {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.baseline-status.ok { background: rgba(63,185,80,0.15); color: var(--green); }
+.baseline-status.warn { background: rgba(210,153,34,0.15); color: var(--orange); }
+.baseline-status.danger { background: rgba(248,81,73,0.15); color: var(--red); }
+
+/* ===== 基准线一览表 ===== */
+.baseline-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.baseline-table th, .baseline-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.baseline-table th {
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.baseline-table td:nth-child(2) { color: var(--blue); }
+.baseline-table td:nth-child(3) { color: var(--green); }
+.baseline-table td:nth-child(4) { color: var(--orange); }
+.baseline-table td:nth-child(5) { color: var(--red); }
+.baseline-table tr:last-child td { border-bottom: none; }

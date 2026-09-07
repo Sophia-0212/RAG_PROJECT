@@ -1,0 +1,24 @@
+/* ============ 图表面板浮动因果说明 ============ */
+/* 跟 .panel .desc（静态、不随时间变化的图表背景介绍）区分：
+   .panel-narration 是随 tick/场景状态变化的动态因果解释，文字更新时有淡入+上滑过渡，
+   并叠加一次极轻的高亮闪烁（pulse），提示"这句话刚刚变了，不是一直显示的"。 */
+.panel-narration {
+  display: none;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #d9bfff; /* 区别于 .desc 的 var(--muted)，用淡紫色跟叙述性文字做视觉区分 */
+  background: rgba(188, 140, 255, 0.08);
+  border-left: 2px solid var(--purple);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+.panel-narration.show { display: block; }
+.panel-narration.pulse {
+  animation: narration-enter 0.5s ease-out;
+}
+@keyframes narration-enter {
+  0% { opacity: 0; transform: translateY(-4px); background: rgba(188, 140, 255, 0.22); }
+  60% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; transform: translateY(0); background: rgba(188, 140, 255, 0.08); }
+}

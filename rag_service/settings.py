@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -63,11 +64,11 @@ def _as_positive_float(value: str | None, default: float, name: str) -> float:
 @dataclass(frozen=True)
 class Settings:
     environment: str = "development"
-    openai_api_key: str | None = None
-    deepseek_api_key: str | None = None
-    tavily_api_key: str | None = None
-    langfuse_secret_key: str | None = None
-    langfuse_public_key: str | None = None
+    openai_api_key: str | None = field(default=None, repr=False)
+    deepseek_api_key: str | None = field(default=None, repr=False)
+    tavily_api_key: str | None = field(default=None, repr=False)
+    langfuse_secret_key: str | None = field(default=None, repr=False)
+    langfuse_public_key: str | None = field(default=None, repr=False)
     langfuse_base_url: str = "http://localhost:3001"
     milvus_uri: str = "http://127.0.0.1:19530"
     collection_name: str = "t_collection01"
@@ -96,10 +97,19 @@ class Settings:
     max_web_searches: int = 1
     max_total_tokens: int = 8192
     request_timeout_seconds: float = 30.0
+    state_backend: str = "sqlite"
     checkpoint_path: str = ".rag-state/checkpoints.sqlite3"
+    database_url: str | None = field(default=None, repr=False)
+    db_pool_min_size: int = 1
+    db_pool_max_size: int = 16
+    db_pool_timeout_seconds: float = 5.0
+    redis_url: str | None = field(default=None, repr=False)
+    redis_socket_timeout_seconds: float = 1.0
+    conversation_lock_ttl_seconds: float = 45.0
+    conversation_lock_acquire_timeout_seconds: float = 0.25
     conversation_ttl_seconds: int = 86400
     conversation_summary_max_chars: int = 2000
-    max_concurrent_requests: int = 8
+    max_concurrent_requests: int = 12
     concurrency_acquire_timeout_seconds: float = 0.25
     tenant_request_burst: int = 20
     tenant_requests_per_minute: int = 60
@@ -109,10 +119,24 @@ class Settings:
     circuit_failure_threshold: int = 3
     circuit_recovery_seconds: float = 30.0
     llm_timeout_seconds: float = 20.0
-    gateway_shared_secret: str | None = None
+    gateway_shared_secret: str | None = field(default=None, repr=False)
+    graph_version: str = "graph2-bounded-v1"
+    input_schema_version: int = 1
+    recovery_enabled: bool = False
+    recovery_max_attempts: int = 3
+    recovery_window_seconds: int = 300
+    run_lease_seconds: float = 45.0
+    run_heartbeat_seconds: float = 10.0
+    recovery_poll_seconds: float = 1.0
+    recovery_concurrency: int = 2
+    recovery_authorization_url: str | None = None
+    recovery_authorization_token: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "Settings":
+        state_backend = values.get("RAG_STATE_BACKEND", "sqlite").strip().lower()
+        if state_backend not in {"sqlite", "postgres"}:
+            raise SettingsError("RAG_STATE_BACKEND must be 'sqlite' or 'postgres'")
         fusion_mode = values.get("RAG_FUSION_MODE", "rrf").strip().lower()
         if fusion_mode not in {"rrf", "weighted"}:
             raise SettingsError("RAG_FUSION_MODE must be 'rrf' or 'weighted'")
@@ -120,7 +144,7 @@ class Settings:
         sparse_weight = _as_float(values.get("RAG_SPARSE_WEIGHT"), 0.5, "RAG_SPARSE_WEIGHT")
         if dense_weight + sparse_weight <= 0:
             raise SettingsError("RAG_DENSE_WEIGHT and RAG_SPARSE_WEIGHT cannot both be zero")
-        return cls(
+        settings = cls(
             environment=values.get("RAG_ENV", "development"),
             openai_api_key=values.get("OPENAI_API_KEY") or None,
             deepseek_api_key=values.get("DEEPSEEK_API_KEY") or None,
@@ -195,7 +219,32 @@ class Settings:
                 30.0,
                 "RAG_REQUEST_TIMEOUT_SECONDS",
             ),
+            state_backend=state_backend,
             checkpoint_path=values.get("RAG_CHECKPOINT_PATH", ".rag-state/checkpoints.sqlite3"),
+            database_url=values.get("RAG_DATABASE_URL") or None,
+            db_pool_min_size=_as_int(values.get("RAG_DB_POOL_MIN_SIZE"), 1, "RAG_DB_POOL_MIN_SIZE"),
+            db_pool_max_size=_as_int(values.get("RAG_DB_POOL_MAX_SIZE"), 16, "RAG_DB_POOL_MAX_SIZE"),
+            db_pool_timeout_seconds=_as_positive_float(
+                values.get("RAG_DB_POOL_TIMEOUT_SECONDS"),
+                5.0,
+                "RAG_DB_POOL_TIMEOUT_SECONDS",
+            ),
+            redis_url=values.get("RAG_REDIS_URL") or None,
+            redis_socket_timeout_seconds=_as_positive_float(
+                values.get("RAG_REDIS_SOCKET_TIMEOUT_SECONDS"),
+                1.0,
+                "RAG_REDIS_SOCKET_TIMEOUT_SECONDS",
+            ),
+            conversation_lock_ttl_seconds=_as_positive_float(
+                values.get("RAG_CONVERSATION_LOCK_TTL_SECONDS"),
+                45.0,
+                "RAG_CONVERSATION_LOCK_TTL_SECONDS",
+            ),
+            conversation_lock_acquire_timeout_seconds=_as_positive_float(
+                values.get("RAG_CONVERSATION_LOCK_ACQUIRE_TIMEOUT_SECONDS"),
+                0.25,
+                "RAG_CONVERSATION_LOCK_ACQUIRE_TIMEOUT_SECONDS",
+            ),
             conversation_ttl_seconds=_as_int(
                 values.get("RAG_CONVERSATION_TTL_SECONDS"),
                 86400,
@@ -208,7 +257,7 @@ class Settings:
             ),
             max_concurrent_requests=_as_int(
                 values.get("RAG_MAX_CONCURRENT_REQUESTS"),
-                8,
+                12,
                 "RAG_MAX_CONCURRENT_REQUESTS",
             ),
             concurrency_acquire_timeout_seconds=_as_positive_float(
@@ -257,7 +306,63 @@ class Settings:
                 "RAG_LLM_TIMEOUT_SECONDS",
             ),
             gateway_shared_secret=values.get("RAG_GATEWAY_SHARED_SECRET") or None,
+            graph_version=values.get("RAG_GRAPH_VERSION", "graph2-bounded-v1").strip(),
+            input_schema_version=_as_int(
+                values.get("RAG_INPUT_SCHEMA_VERSION"),
+                1,
+                "RAG_INPUT_SCHEMA_VERSION",
+            ),
+            recovery_enabled=_as_bool(values.get("RAG_RECOVERY_ENABLED"), False),
+            recovery_max_attempts=_as_int(
+                values.get("RAG_RECOVERY_MAX_ATTEMPTS"),
+                3,
+                "RAG_RECOVERY_MAX_ATTEMPTS",
+            ),
+            recovery_window_seconds=_as_int(
+                values.get("RAG_RECOVERY_WINDOW_SECONDS"),
+                300,
+                "RAG_RECOVERY_WINDOW_SECONDS",
+            ),
+            run_lease_seconds=_as_positive_float(
+                values.get("RAG_RUN_LEASE_SECONDS"),
+                45.0,
+                "RAG_RUN_LEASE_SECONDS",
+            ),
+            run_heartbeat_seconds=_as_positive_float(
+                values.get("RAG_RUN_HEARTBEAT_SECONDS"),
+                10.0,
+                "RAG_RUN_HEARTBEAT_SECONDS",
+            ),
+            recovery_poll_seconds=_as_positive_float(
+                values.get("RAG_RECOVERY_POLL_SECONDS"),
+                1.0,
+                "RAG_RECOVERY_POLL_SECONDS",
+            ),
+            recovery_concurrency=_as_int(
+                values.get("RAG_RECOVERY_CONCURRENCY"),
+                2,
+                "RAG_RECOVERY_CONCURRENCY",
+            ),
+            recovery_authorization_url=values.get("RAG_RECOVERY_AUTHORIZATION_URL") or None,
+            recovery_authorization_token=values.get("RAG_RECOVERY_AUTHORIZATION_TOKEN") or None,
         )
+        if settings.db_pool_max_size < settings.db_pool_min_size:
+            raise SettingsError("RAG_DB_POOL_MAX_SIZE cannot be smaller than RAG_DB_POOL_MIN_SIZE")
+        if settings.conversation_lock_ttl_seconds <= settings.request_timeout_seconds:
+            raise SettingsError("RAG_CONVERSATION_LOCK_TTL_SECONDS must exceed RAG_REQUEST_TIMEOUT_SECONDS")
+        if settings.run_heartbeat_seconds >= settings.run_lease_seconds:
+            raise SettingsError("RAG_RUN_HEARTBEAT_SECONDS must be smaller than RAG_RUN_LEASE_SECONDS")
+        if settings.recovery_enabled and settings.run_lease_seconds <= settings.request_timeout_seconds:
+            raise SettingsError("RAG_RUN_LEASE_SECONDS must exceed RAG_REQUEST_TIMEOUT_SECONDS")
+        if settings.recovery_enabled and settings.recovery_window_seconds * 1.0 <= settings.run_lease_seconds:
+            raise SettingsError("RAG_RECOVERY_WINDOW_SECONDS must exceed RAG_RUN_LEASE_SECONDS")
+        if settings.recovery_enabled and settings.conversation_ttl_seconds <= settings.recovery_window_seconds:
+            raise SettingsError("RAG_CONVERSATION_TTL_SECONDS must exceed RAG_RECOVERY_WINDOW_SECONDS")
+        if not settings.graph_version:
+            raise SettingsError("RAG_GRAPH_VERSION cannot be empty")
+        if settings.recovery_enabled and settings.state_backend != "postgres":
+            raise SettingsError("RAG_RECOVERY_ENABLED requires RAG_STATE_BACKEND=postgres")
+        return settings
 
     @classmethod
     def from_env(cls, load_env_file: bool = True) -> "Settings":
@@ -285,8 +390,35 @@ class Settings:
             errors.append("RAG_GATEWAY_SHARED_SECRET must contain at least 32 characters")
         if "127.0.0.1" in self.milvus_uri or "localhost" in self.milvus_uri:
             errors.append("MILVUS_URI cannot target localhost")
-        if not Path(self.checkpoint_path).is_absolute():
-            errors.append("RAG_CHECKPOINT_PATH must be an absolute persistent path")
+        if self.state_backend != "postgres":
+            errors.append("RAG_STATE_BACKEND must be 'postgres' in production")
+        if not self.database_url:
+            errors.append("RAG_DATABASE_URL is required in production")
+        else:
+            database = urlparse(self.database_url)
+            if database.scheme not in {"postgres", "postgresql"}:
+                errors.append("RAG_DATABASE_URL must use postgres:// or postgresql://")
+            if database.hostname in {"localhost", "127.0.0.1"}:
+                errors.append("RAG_DATABASE_URL cannot target localhost")
+        if not self.redis_url:
+            errors.append("RAG_REDIS_URL is required in production")
+        else:
+            redis = urlparse(self.redis_url)
+            if redis.scheme not in {"redis", "rediss"}:
+                errors.append("RAG_REDIS_URL must use redis:// or rediss://")
+            if redis.hostname in {"localhost", "127.0.0.1"}:
+                errors.append("RAG_REDIS_URL cannot target localhost")
+        if self.recovery_enabled:
+            if not self.recovery_authorization_url:
+                errors.append("RAG_RECOVERY_AUTHORIZATION_URL is required when recovery is enabled")
+            else:
+                authorization = urlparse(self.recovery_authorization_url)
+                if authorization.scheme != "https":
+                    errors.append("RAG_RECOVERY_AUTHORIZATION_URL must use https")
+                if authorization.hostname in {"localhost", "127.0.0.1"}:
+                    errors.append("RAG_RECOVERY_AUTHORIZATION_URL cannot target localhost")
+            if not self.recovery_authorization_token:
+                errors.append("RAG_RECOVERY_AUTHORIZATION_TOKEN is required when recovery is enabled")
         if errors:
             raise SettingsError("unsafe production configuration: " + "; ".join(errors))
 

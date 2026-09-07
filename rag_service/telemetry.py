@@ -13,25 +13,28 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, gene
 
 _TRACE_FIELDS = frozenset(
     {
-        "request_id",
-        "tenant_hash",
-        "user_hash",
-        "conversation_hash",
-        "action",
-        "outcome",
-        "reason",
-        "route",
-        "degraded",
-        "elapsed_ms",
-        "step_count",
-        "retrieval_attempts",
-        "generation_attempts",
-        "estimated_tokens",
-        "component_versions",
-        "candidate_ids",
-        "candidate_scores",
-        "citation_ids",
-        "cited_chunk_ids",
+        "request_id",  # 请求唯一标识
+        "tenant_hash",  # 租户ID的哈希值（脱敏后，不是原始tenant_id）
+        "user_hash",  # 用户ID的哈希值（脱敏后，不是原始user_id）
+        "conversation_hash",  # 会话ID的哈希值（脱敏后）
+        "action",  # 当前执行的动作类型（route/retrieve/generate等，对应Action枚举）
+        "outcome",  # 结果（success/refused/error等）
+        "reason",  # 拒绝或失败的具体原因
+        "route",  # 问题路由到了哪条分支（web_search/vectorstore/direct_answer）
+        "degraded",  # 是否降级返回（未完全满足质量要求但仍返回了结果）
+        "elapsed_ms",  # 耗时（毫秒）
+        "step_count",  # 本轮请求Graph总步数
+        "retrieval_attempts",  # 本轮请求检索尝试次数
+        "generation_attempts",  # 本轮请求生成尝试次数
+        "estimated_tokens",  # 本轮请求估算的token消耗
+        "component_versions",  # 本次用到的模型/组件版本信息
+        "candidate_ids",  # 检索候选文档的chunk_id列表
+        "candidate_scores",  # 检索候选文档的分数列表
+        "citation_ids",  # 生成答案引用的citation标识列表
+        "cited_chunk_ids",  # 生成答案引用的chunk_id列表
+        "run_status",  # 请求执行运行状态（用于持久化运行生命周期跟踪）
+        "attempt_count",  # 整体请求重试次数（区别于单个动作的attempts）
+        "lease_owner_hash",  # 分布式协调中持有租约的所有者标识哈希（脱敏后）
     }
 )
 
@@ -101,6 +104,34 @@ class RAGTelemetry:
             ("action", "outcome"),
             registry=self.registry,
         )
+        self.coordination_events = Counter(
+            "rag_coordination_events_total",
+            "Distributed coordination outcomes",
+            ("action", "outcome"),
+            registry=self.registry,
+        )
+        self.run_events = Counter(
+            "rag_run_events_total",
+            "Durable request-run lifecycle outcomes",
+            ("action", "outcome"),
+            registry=self.registry,
+        )
+        self.recovery_backlog = Gauge(
+            "rag_recovery_backlog",
+            "Recoverable request runs waiting or holding an expired lease",
+            registry=self.registry,
+        )
+        self.recovery_backlog_oldest_seconds = Gauge(
+            "rag_recovery_backlog_oldest_seconds",
+            "Age of the oldest recoverable request run",
+            registry=self.registry,
+        )
+        self.dependency_ready = Gauge(
+            "rag_dependency_ready",
+            "Whether a required runtime dependency is ready",
+            ("dependency",),
+            registry=self.registry,
+        )
 
     def trace(self, name: str, attributes: Mapping[str, Any]) -> None:
         self.sink.emit({"event": name, **redact_attributes(attributes)})
@@ -114,6 +145,19 @@ class RAGTelemetry:
 
     def observe_action(self, *, action: str, outcome: str, elapsed_seconds: float) -> None:
         self.action_duration.labels(action=action, outcome=outcome).observe(elapsed_seconds)
+
+    def observe_coordination(self, *, action: str, outcome: str) -> None:
+        self.coordination_events.labels(action=action, outcome=outcome).inc()
+
+    def observe_run(self, *, action: str, outcome: str) -> None:
+        self.run_events.labels(action=action, outcome=outcome).inc()
+
+    def set_recovery_backlog(self, *, count: int, oldest_age_seconds: float) -> None:
+        self.recovery_backlog.set(count)
+        self.recovery_backlog_oldest_seconds.set(oldest_age_seconds)
+
+    def set_dependency_ready(self, dependency: str, ready: bool) -> None:
+        self.dependency_ready.labels(dependency=dependency).set(1 if ready else 0)
 
     def metrics(self) -> bytes:
         return generate_latest(self.registry)

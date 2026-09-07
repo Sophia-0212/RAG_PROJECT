@@ -1,0 +1,15 @@
+{
+  "release_id": "ad-crm-golden-small-v1.0.0",
+  "released_at": "2026-09-05T00:00:00+08:00",
+  "dataset_path": "evaluation/datasets/ad_crm_golden_small_v1.jsonl",
+  "dataset_sha256": "15b7c57b0b555ddd44ca39ab8d886a80ba52d192721aa412afba31e6104025be",
+  "corpus_manifest_path": "evaluation/corpus/ad_crm_v1/manifest.json",
+  "corpus_manifest_sha256": "bb569fe147ba1b43fc91e9307ae3fa04ac67f29111f6e22868bd2b10c9035eff",
+  "knowledge_snapshot_id": "ad-crm-snapshot-2026-09-01",
+  "schema_version": "evaluation.schema.EvalCase/v2",
+  "annotation_guideline_version": "1.0",
+  "runner_version": "evaluation.runner/v1",
+  "fictional": true,
+  "case_count": 64,
+  "splits": {"development": 16, "locked": 40, "security": 8}
+}

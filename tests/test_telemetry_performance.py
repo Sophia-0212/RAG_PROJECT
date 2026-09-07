@@ -27,9 +27,13 @@ class TelemetryAndPerformanceTest(unittest.TestCase):
             elapsed_seconds=0.1,
             response={"refusal_reason": None, "degraded": False},
         )
+        telemetry.observe_coordination(action="conversation_lock", outcome="busy")
+        telemetry.set_dependency_ready("checkpoint_store", True)
         output = telemetry.metrics().decode("utf-8")
 
         self.assertIn("rag_requests_total", output)
+        self.assertIn("rag_coordination_events_total", output)
+        self.assertIn("rag_dependency_ready", output)
         self.assertNotIn("tenant-a", output)
         self.assertNotIn("alice", output)
 

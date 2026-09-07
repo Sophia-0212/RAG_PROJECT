@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:ff80089083d7365046af7f03d949a2defa14e0b09e14bd5b8f08a242291be8b2
+    profiles: [integration]
+    environment:
+      POSTGRES_DB: rag_test
+      POSTGRES_USER: rag_test
+      POSTGRES_PASSWORD: rag_test_only
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_test -d rag_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine@sha256:9a56851f1a97e0586f85f8d7f7652e65cb589b2409d965c5d6e275dfc2551907
+    profiles: [integration]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

@@ -28,13 +28,13 @@ ENV PATH="/opt/venv/bin:$PATH" \
     RAG_ENV=production \
     RAG_API_HOST=0.0.0.0 \
     RAG_API_PORT=8000 \
-    RAG_CHECKPOINT_PATH=/var/lib/rag/checkpoints.sqlite3 \
+    RAG_STATE_BACKEND=postgres \
     HF_HUB_OFFLINE=true
 
 RUN groupadd --system --gid 10001 rag \
     && useradd --system --uid 10001 --gid rag --home-dir /nonexistent --shell /usr/sbin/nologin rag \
-    && mkdir -p /app /var/lib/rag \
-    && chown -R rag:rag /app /var/lib/rag
+    && mkdir -p /app \
+    && chown -R rag:rag /app
 
 COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
@@ -42,8 +42,6 @@ COPY --chown=rag:rag . .
 
 USER 10001:10001
 EXPOSE 8000
-VOLUME ["/var/lib/rag"]
-
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=2).read()"]
 

@@ -20,12 +20,15 @@ dependencies = [
   "langchain-openai==1.6.0",
   "langfuse==4.15.1",
   "langgraph==1.2.11",
+  "langgraph-checkpoint-postgres==3.1.2",
   "langgraph-checkpoint-sqlite==3.1.1",
   "loguru==0.7.3",
   "pydantic==2.13.4",
   "prometheus-client==0.26.0",
   "pymilvus==3.0.1",
+  "psycopg[binary,pool]==3.3.2",
   "python-dotenv==1.2.3",
+  "redis==8.1.0",
   "sentence-transformers==6.0.0",
   "tiktoken==0.14.0",
   "unstructured[md]==0.27.1",
@@ -35,9 +38,12 @@ dependencies = [
 [project.scripts]
 rag-cli = "rag_service.cli:main"
 rag-eval-gate = "evaluation.cli:main"
+rag-eval = "evaluation.run_cli:main"
 rag-ingest = "documents.ingest_markdown:main"
 rag-api = "rag_service.api_cli:main"
 rag-migrate = "rag_service.migrations:main"
+rag-state-load = "evaluation.state_load_test:main"
+rag-recovery-worker = "rag_service.recovery_worker:main"
 
 [project.optional-dependencies]
 test = ["httpx==0.28.1"]
@@ -46,4 +52,4 @@ test = ["httpx==0.28.1"]
 include = ["agent*", "documents*", "evaluation*", "graph*", "graph2*", "llm_models*", "rag_service*", "tools*", "utils*"]
 
 [tool.setuptools.package-data]
-evaluation = ["datasets/*.jsonl", "*.json"]
+evaluation = ["datasets/*.jsonl", "*.json", "corpus/ad_crm_v1/*.json", "corpus/ad_crm_v1/*.md"]

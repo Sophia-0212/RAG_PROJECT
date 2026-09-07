@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Prometheus 模拟监控大屏 - RAG Enterprise Service</title>
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/stat-cards.css">
+<link rel="stylesheet" href="styles/panels.css">
+<link rel="stylesheet" href="styles/tooltip.css">
+<link rel="stylesheet" href="styles/narration.css">
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-title">🎛️ 故障场景</div>
+  <div class="sidebar-subtitle">点击切换模拟场景，观察各指标如何联动变化</div>
+
+  <div class="scenario-group-label">基线</div>
+  <button class="scenario-item" data-scenario-id="normal" data-severity="ok">
+    <span class="dot-status"></span>正常场景
+    <span class="item-desc">围绕"上线后"文档基准小幅波动</span>
+    <span class="scenario-progress"></span>
+  </button>
+
+  <div class="scenario-group-label">下游依赖故障</div>
+  <button class="scenario-item" data-scenario-id="incident" data-severity="warn">
+    <span class="dot-status"></span>LLM 延迟抖动
+    <span class="item-desc">延迟渐进升高，请求最终仍能成功</span>
+    <span class="scenario-progress"></span>
+  </button>
+  <button class="scenario-item" data-scenario-id="outage" data-severity="danger">
+    <span class="dot-status"></span>LLM 完全不可用（熔断跳闸）
+    <span class="item-desc">连续失败触发熔断，快速拒绝+成功率骤降</span>
+    <span class="scenario-progress"></span>
+  </button>
+
+  <div class="scenario-group-label">更多场景（规划中）</div>
+  <button class="scenario-item" disabled style="opacity:0.4; cursor:not-allowed;">
+    <span class="dot-status"></span>数据库连接池耗尽
+    <span class="item-desc">渐进式资源枯竭，曲线形态与依赖抖动不同</span>
+  </button>
+  <button class="scenario-item" disabled style="opacity:0.4; cursor:not-allowed;">
+    <span class="dot-status"></span>发布引入配置错误
+    <span class="item-desc">故障时间点精确对应一次变更</span>
+  </button>
+
+  <div class="sidebar-footer-hint">
+    新增场景步骤：① 在 <code>js/scenarios/</code> 加一个场景文件，注册进 <code>scenario-registry.js</code> ② 在这里加一个
+    <code>.scenario-item</code> 按钮（<code>data-scenario-id</code> 对应场景 key） ③ 需要新指标时在
+    <code>baselines.js</code> 里注册。三步互相独立，不用改动已有场景的代码。
+  </div>
+</div>
+
+<div class="main-content">
+
+<header>
+  <div>
+    <h1>RAG Enterprise Service <span class="tag">MOCK PROMETHEUS</span></h1>
+    <div class="subtitle">模拟数据 · 对应 rag_service/telemetry.py 中定义的 Counter / Histogram / Gauge · 仅供直觉建立，非真实监控系统</div>
+  </div>
+  <div class="clock"><span class="live-dot"></span><span id="clock-text">--:--:--</span></div>
+</header>
+
+<div class="incident-banner" id="incident-banner">
+  ⚠ 模拟故障进行中：下游 LLM 服务延迟从 ~2s 涨到 ~9s，触发客户端超时重试 → <code>duplicate</code> 指标随之暴增，同时并发容量逐渐吃紧。约 30 秒后自动恢复。
+</div>
+
+<div class="incident-banner" id="outage-banner">
+  ⚠ 模拟故障进行中：LLM 服务完全不可用（连续调用失败）。前几次调用会真的等到 20s 超时才失败（对应 llm_timeout_seconds），
+  延迟先冲高；<b>连续失败 3 次后熔断器跳闸（circuit_failure_threshold=3）</b>，后续请求不再等待，直接被熔断快速拒绝——
+  这时延迟反而<b>断崖式下跌</b>，但 success rate 同时<b>断崖式下跌</b>，这种"延迟低但成功率也低"的反直觉组合正是熔断跳闸的信号。
+  冷却 30 秒（circuit_recovery_seconds）后放一个试探请求，试探成功则恢复正常。
+</div>
+
+<div class="grid">
+  <div class="stat-card">
+    <div class="label">In-Flight Requests（在飞请求数）
+      <span class="info-icon">?<span class="tip"><b>Gauge（仪表盘指标）</b>当前正在处理、还没返回结果的请求数量。数值是"此刻的存量状态"，不是累计值——请求处理完就会 -1。<br><br><b>面试常问的区别点：</b>In-Flight ≠ QPS。QPS 是"每秒新增多少个请求"（流量），In-Flight 是"这一刻有多少个还没处理完"（存量）。两者关系近似 Little's Law：In-Flight ≈ QPS × 平均处理耗时。同样 QPS=10，如果处理耗时从 0.1s 涨到 5s，In-Flight 会从 ~1 暴涨到 ~50——这是请求堆积的典型信号。<br><br><b>基准怎么定的：</b>基准 = 27.7（文档"3 Pod×12并发=36槏位，保守估算约27.7个在飞请求"，也就是占用率 ~77%）。告警门槏设在占用率 85%（≈30.6），危险门槏设在占用率 95%（≈34.2，逼近 36 槏位上限）——这两个阈值直接对应下方 capacity 拒绝真正开始触发的临界点，不是随便取的百分比。</span></span>
+    </div>
+    <div class="value" id="stat-inflight">0</div>
+    <div class="delta" id="stat-inflight-delta">rag_requests_in_flight，当前正在处理、尚未返回的请求数</div>
+    <div class="baseline-bar" id="bar-inflight"><div class="pointer" id="pointer-inflight"></div><div class="baseline-mark" id="mark-inflight"></div></div>
+    <div class="baseline-label-row"><span>0</span><span id="baseline-inflight-label">基准 27.7</span><span>36</span></div>
+    <div class="baseline-status ok" id="status-inflight">正常</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">QPS（每秒请求数）
+      <span class="info-icon">?<span class="tip"><b>Counter（计数器）→ rate() 转速率</b>底层指标 rag_requests_total 是一个只会往上涨的累计计数器，单看总数没有意义。Prometheus 用 rate(rag_requests_total[1m]) 把它换算成"每秒新增多少"——<b>方括号 [1m] 是"取样窗口"，不是单位</b>：意思是拿最近 1 分钟内这个计数器涨了多少，除以 60 秒，得到这 1 分钟的平均每秒速率，最终结果单位仍然是"次/秒"（req/s），跟窗口取多长完全无关。这是 PromQL 里最容易搞混的一点：<code>[1m]</code>只决定"用多长的历史窗口去平滑这个速率"，不改变输出单位。这也是为什么本面板顶部卡片用 [1m]（更灵敏，10 秒内的波动都能看出来）、下方折线图的说明里提到的告警规则常用 [5m]（更平滑，避免单次抖动误报）——同一个指标，取样窗口选多长取决于"要多灵敏还是要多稳"，是一个真实的工程取舍，不是随便选的。面试英文表达：throughput / requests per second (QPS)。<br><br><b>基准怎么定的：</b>基准 = 9（文档"峰值 RAG QPS 9"）。QPS 涨其实是好事（业务量大），这里"告警/危险"不是"涨了不好"，是"涨到超出容量规划的水位，服务可能扛不住了"——告警门槏 1.3× 基准（≈11.7），危险门槏 1.8× 基准（≈16.2，这个流量下 In-Flight 大概率会把 capacity 阈值顶穿）。</span></span>
+    </div>
+    <div class="value green" id="stat-qps">0</div>
+    <div class="delta">rate(rag_requests_total[1m])，success + refused 合计</div>
+    <div class="baseline-bar" id="bar-qps"><div class="pointer" id="pointer-qps"></div><div class="baseline-mark" id="mark-qps"></div></div>
+    <div class="baseline-label-row"><span>0</span><span id="baseline-qps-label">基准 9</span><span id="qps-max-label">16.2+</span></div>
+    <div class="baseline-status ok" id="status-qps">正常</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Success Rate（成功率）
+      <span class="info-icon">?<span class="tip"><b>由 rag_requests_total 按 outcome 拆分算出</b>成功请求数 ÷ 总请求数。这个指标突然下跌，是最直接的"服务出问题了"的信号，通常是 SLO / 告警规则里第一个会配置的指标。英文常说 success rate 或反过来说 error rate（错误率，= 1 - success rate）。<br><br><b>基准怎么定的：</b>基准 = 90%（<b>不是</b>文档"审批恢复成功率 99.93%"——那是 HITL 人工审批节点的恢复成功率，分母是"进入 RETRYABLE 且恢复窗口内符合版本/权限条件的审批任务"，跟这里"outcome=success 的 RAG 请求占比"是两个完全不同的分母，文档里明确写了"不得混入"，之前用 99% 是拿了一个不同指标的数量级硬凑的，已修正）。真实链路里 <code>rag_requests_total{{outcome}}</code> 只有 success/refused 两种，refused 覆盖 15 种业务拒答原因（预算耗尽、证据不足、需要澄清、路由不支持等，见 execution.py FailureReason）+ ACL 鉴权不足拒答——一个真实企业级 RAG 服务，光是"检索证据不足/答案不可靠而主动拒答"就可能占请求量的 5-10%，加上限流/并发/协调层拒绝，90% 是更贴近现实的基准，99% 对生产级 LLM 应用来说过于理想化。<br><br>这个指标是"越低越差"，方向跟别的指标相反——告警门槏 82%（跌破意味着拒答率明显异常），危险门槏 70%（大量请求真的没能给出答案，需要立刻介入）。</span></span>
+    </div>
+    <div class="value green" id="stat-success">100%</div>
+    <div class="delta" id="stat-success-delta">outcome="success" 的请求占比</div>
+    <div class="baseline-bar" id="bar-success"><div class="pointer" id="pointer-success"></div><div class="baseline-mark" id="mark-success"></div></div>
+    <div class="baseline-label-row"><span>100%</span><span id="baseline-success-label">基准 90%</span><span>0%</span></div>
+    <div class="baseline-status ok" id="status-success">正常</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">P95 Latency（P95 延迟）
+      <span class="info-icon">?<span class="tip"><b>Histogram（直方图指标）</b>真实 Prometheus 里 P95/P99 不是直接存出来的，是用 histogram_quantile(0.95, sum(rate(rag_request_duration_seconds_bucket[5m])) by (le)) 从一组预设边界的 _bucket{le="..."} 计数器里<b>线性插值估算</b>出来的，精度取决于 bucket 边界分得够不够密——这是近似值，不是精确值。<br><br>好处是可以跨多个 Pod/实例聚合（sum by (le) 直接把各实例的 bucket 加起来）；缺点是精度受限。<b>面试常问的对照点：</b>Prometheus 还有个 Summary 类型能算出精确分位数，但 Summary 的分位数是客户端本地算好的，没法跨实例聚合——这是 Histogram vs Summary 的经典权衡。<br><br><b>基准怎么定的：</b>基准 = 3.08s（文档"上线后 RAG P95 完整响应 3.08 秒"，这是实测数字不是拍脑袋）。告警门槏 1.5× 基准（≈4.6s，正好逼近文档"基线"4.85s——也就是告警意味着"退回到优化前的水平"）；危险门槏 2.5× 基准（≈7.7s，接近 LLM 硬超时 llm_timeout_seconds=20s 的三分之一，用户体感已经很差）。</span></span>
+    </div>
+    <div class="value" id="stat-p95">0 ms</div>
+    <div class="delta" id="stat-p95-delta">histogram_quantile(0.95, ...) 估算值</div>
+    <div class="baseline-bar" id="bar-p95"><div class="pointer" id="pointer-p95"></div><div class="baseline-mark" id="mark-p95"></div></div>
+    <div class="baseline-label-row"><span>0</span><span id="baseline-p95-label">基准 3.08s</span><span id="p95-max-label">7.7s+</span></div>
+    <div class="baseline-status ok" id="status-p95">正常</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Average Latency（平均处理耗时）
+      <span class="info-icon">?<span class="tip"><b>Histogram 的 sum/count（rate 后相除）</b>PromQL 写法：rate(rag_request_duration_seconds_sum[5m]) / rate(rag_request_duration_seconds_count[5m])——用"耗时总和的增长速率"除以"请求数的增长速率"，就是滑动窗口内的平均耗时。跟 P95/P99 不同，这是<b>精确计算</b>，不是分位数插值估算。<br><br><b>为什么要跟 P95 放在一起看：</b>Average 会被少数很快的请求拉低，掩盖长尾慢请求；P95/P99 才反映真实的用户体感下限。两者一起看，才能同时判断"整体水位"和"有没有极端慢请求"。也是 In-Flight 卡片提到的 Little's Law 里"平均处理耗时"这一项的真实来源——In-Flight ≈ QPS × Average Latency，本面板的 In-Flight 数值就是照这个公式算出来的，不是凭空模拟。<br><br><b>基准怎么定的：</b>基准 ≈ 1.4s（本面板按"Average 常年落在 P50 与 P95 之间"这条经验规律，从 P95 基准 3.08s 反推出来的估算值，文档没有直接给出这个数字）。告警/危险门槏同样按 1.5×/2.5× 基准的比例设定，跟 P95 保持同一套倍数逻辑，方便对照。</span></span>
+    </div>
+    <div class="value" id="stat-avg">0 ms</div>
+    <div class="delta" id="stat-avg-delta">duration_sum / duration_count，滑动窗口平均</div>
+    <div class="baseline-bar" id="bar-avg"><div class="pointer" id="pointer-avg"></div><div class="baseline-mark" id="mark-avg"></div></div>
+    <div class="baseline-label-row"><span>0</span><span id="baseline-avg-label">基准 ~1.4s</span><span id="avg-max-label">3.5s+</span></div>
+    <div class="baseline-status ok" id="status-avg">正常</div>
+  </div>
+</div>
+
+<div class="panel full" style="margin-bottom:18px;">
+  <h2>基准线一览表（Baseline Reference Table）
+    <span class="info-icon">?<span class="tip"><b>"基准"是什么意思</b>这里的"基准"（baseline）不是随便定的门槏，是<b>系统在正常上线后、没有故障时的真实运行水位</b>——本面板全部取自 test/002_1. 模拟业务背景与结果总览.md 里"上线后"这组实测数据（不是"基线"那组优化前的数字）。有了基准，才谈得上"现在这个数值算不算异常"——异常的定义就是"偏离基准多少"。<br><br><b>为什么用"基准×倍数"而不是每个指标手写一个固定区间：</b>倍数法能显式表达"这个指标偏离正常水位的程度"，比如"P95现在是基准的2倍"这句话，比"P95现在是6160ms"信息量更大——后者你还要自己回想正常是多少，前者直接告诉你严重程度。真实 Prometheus 告警规则里，也经常用"当前值/基准值"这种比值（而不是绝对数值）来配置阈值，因为绝对数值会随流量规模变化，比值更稳定。</span></span>
+  </h2>
+  <div class="desc">所有基准均来自"上线后"实测数据；告警/危险阈值按各指标业务含义单独设定倍数，不是统一套用同一个公式</div>
+  <table class="baseline-table">
+    <thead>
+      <tr><th>指标</th><th>基准值</th><th>正常范围</th><th>告警阈值</th><th>危险阈值</th><th>方向</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>In-Flight Requests</td><td>27.7（占用率 77%）</td><td>&lt; 30.6（占用率 &lt;85%）</td><td>≥ 30.6（占用率 ≥85%）</td><td>≥ 34.2（占用率 ≥95%）</td><td>越高越差</td></tr>
+      <tr><td>QPS</td><td>9（峰值）</td><td>&lt; 11.7（1.3× 基准）</td><td>≥ 11.7</td><td>≥ 16.2（1.8× 基准）</td><td>越高需关注容量</td></tr>
+      <tr><td>Success Rate</td><td>99%</td><td>≥ 95%</td><td>&lt; 95%</td><td>&lt; 85%</td><td>越低越差</td></tr>
+      <tr><td>P95 Latency</td><td>3.08s</td><td>&lt; 4.6s（1.5× 基准）</td><td>≥ 4.6s</td><td>≥ 7.7s（2.5× 基准）</td><td>越高越差</td></tr>
+      <tr><td>Average Latency</td><td>~1.4s（估算）</td><td>&lt; 2.1s（1.5× 基准）</td><td>≥ 2.1s</td><td>≥ 3.5s（2.5× 基准）</td><td>越高越差</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panels">
+
+  <div class="panel">
+    <h2>QPS Trend（QPS 趋势） <span class="metric-name">rate(rag_requests_total[1m])</span>
+      <span class="info-icon">?<span class="tip"><b>为什么拆成 success / refused 两条线</b>如果只看总 QPS，一次流量下跌可能是"用户变少了"（正常），也可能是"大量请求被拒绝了"（异常）。拆开看才能分清是需求侧变化还是服务侧出了问题。<br><br><b>refused 具体指哪些请求？举例：</b>不是"处理失败"（那属于 error/exception），是<b>连 RAG 流程都没真正跑起来、在最外层就被挡回去</b>的请求，跟下方 Rejection Reasons 面板的五种 reason 一一对应：①某个租户当天发太猛，被令牌桶限速（quota）——比如一个客户脚本没做限流，1 秒内连发 50 次；②服务当前并发已经打满 36 个槏位，新请求进不来（capacity）——比如下游 LLM 突然变慢，大量请求卡在处理中；③同一个会话（conversation_id）被并发访问，比如用户在两个浏览器标签同时提问同一个对话（conversation_busy）；④协调服务（Redis）本身连不上了（coordination_unavailable）；⑤LLM 连续失败触发熔断，直接快速拒绝（circuit_open）。这五种都是"服务主动挡在门口拒绝"，跟用户问题本身答不出来是两回事。</span></span>
+    </h2>
+    <div class="desc">按 outcome 拆分：success（成功） / refused（被拒绝） · 基准来自模拟规模：日问答量 4,600、峰值 QPS 9</div>
+    <div class="panel-narration" id="narration-chart-qps"></div>
+    <div class="chart-wrap">
+      <canvas id="chart-qps" height="160"></canvas>
+      <div class="crosshair-line" id="crosshair-chart-qps"></div>
+      <div class="chart-tooltip" id="tooltip-chart-qps"></div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:#3fb950"></span>success（成功）</span>
+      <span class="item"><span class="dot" style="background:#d29922"></span>refused（被拒绝）</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Latency Distribution（耗时分布） <span class="metric-name">histogram_quantile(0.95, rate(..._bucket[5m])) 等</span>
+      <span class="info-icon">?<span class="tip">
+        <b>为什么要同时看 Average/P50/P95/P99</b>Average（平均耗时）容易被少数很快的请求拉低，看起来"很正常"；P50（中位数）代表大多数用户的真实体验；P99 代表最慢的 1% 用户有多惨。Average 正常但 P99 飙高，说明存在少数"极端慢请求"（比如某个租户的复杂查询、某次 GC 停顿），只看平均值会完全掩盖这类问题。
+        <br><br><b>四条曲线各自变慢，通常意味着什么：</b>
+        <br>• <b>Average 涨</b>——整体请求的"平均水位"在抬升，通常是<b>系统性、持续性</b>的原因：下游依赖（LLM/Milvus）整体变慢、机器资源（CPU/内存）不够用了、流量比平时大很多导致排队。特点是"大家都慢一点"，不是个别请求特别惨。
+        <br>• <b>P50 涨</b>——一半以上的请求都变慢了，比 Average 涨更能确认"这不是个别慢请求拉高平均值，是主流请求本身就慢了"。常见原因：数据库/向量库索引失效或查询计划变差、缓存命中率骤降、某个公共依赖（比如鉴权、限流组件）本身变慢，拖慢了每一个请求的固定开销。
+        <br>• <b>P95 涨</b>——"尾部"用户开始受影响，但主流用户可能感知还不明显。常见原因：并发接近上限导致排队时间变长（对应 In-Flight 逼近 36 槏位）、GC（垃圾回收）停顿变频繁、少数租户的复杂查询（检索候选多、需要多轮改写）占比上升。这是最常被用来定 SLO 阈值、配置告警的一条线，因为它比 P50 更早暴露"局部恶化"，又不像 P99 那样容易被极端个例干扰。
+        <br>• <b>P99 涨</b>——只有最慢的 1% 在恶化，Average/P50/P95 可能完全正常。常见原因：极少数"坏请求"（超长文本、命中了某个未优化的边界情况、触发了 execution.py 里的重试上限走了好几轮才失败）、单台机器/单个 Pod 局部故障（比如某个 Pod 磁盘 IO 抖动，只影响落在这台机器上的请求）、网络抖动的偶发超时重连。P99 单独涨、其余三条不动，通常不是"整体扩容"能解决的，得去挖具体是哪一小撮请求在拖后腿。
+      </span></span>
+    </h2>
+    <div class="desc">Average（平均） / P50（中位数） / P95 / P99 分位数，单位毫秒 · 基准来自模拟结果：上线后 P95 完整响应 3.08 秒</div>
+    <div class="panel-narration" id="narration-chart-latency"></div>
+    <div class="chart-wrap">
+      <canvas id="chart-latency" height="160"></canvas>
+      <div class="crosshair-line" id="crosshair-chart-latency"></div>
+      <div class="chart-tooltip" id="tooltip-chart-latency"></div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:#3fb950"></span>Average（平均）</span>
+      <span class="item"><span class="dot" style="background:#58a6ff"></span>P50（中位数）</span>
+      <span class="item"><span class="dot" style="background:#d29922"></span>P95</span>
+      <span class="item"><span class="dot" style="background:#f85149"></span>P99</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Rejection Reasons（拒绝原因分布） <span class="metric-name">rate(rag_request_rejections_total[1m])</span>
+      <span class="info-icon">?<span class="tip"><b>五种拒绝各自意味着什么</b>quota（配额限流）：某个租户发得太猛，被令牌桶限速——这是随时间平滑发生的，跟此刻并发多少无关；capacity（容量超限）：整个服务并发槽位（36 个）被占满了才会触发，是纯瞬时的阈值行为，槽位没满时几乎不会发生；conversation_busy（会话占用中）：同一个会话被并发访问，协调层拒绝了；coordination_unavailable（协调服务不可用）：协调服务本身连不上了；<b>circuit_open（熔断跳闸）</b>：LLM 连续失败达到阈值（circuit_failure_threshold=3），熔断器直接拒绝，不再浪费时间去调一个已知挂了的依赖——这是本面板里唯一一种"延迟反而更低"的拒绝，因为它是快速失败，不用等超时。同样是"被拒绝"，触发机制、根因和该找谁修完全不同。<br><br><b>本面板里 capacity 的模拟方式：</b>由 In-Flight 相对 36 个槏位的占用率派生，占用率超过 85% 才开始陡增，之下几乎为 0——不是像 quota 一样的持续背景噪声。</span></span>
+    </h2>
+    <div class="desc">按 reason（拒绝原因）拆分 · 基准来自模拟规模：RAG Service 3 Pod×1 worker×12 并发（应用槽位 36），保守估算约 27.7 个在飞请求</div>
+    <div class="panel-narration" id="narration-chart-rejections"></div>
+    <div class="chart-wrap">
+      <canvas id="chart-rejections" height="160"></canvas>
+      <div class="crosshair-line" id="crosshair-chart-rejections"></div>
+      <div class="chart-tooltip" id="tooltip-chart-rejections"></div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:#d29922"></span>quota（配额限流）</span>
+      <span class="item"><span class="dot" style="background:#f85149"></span>capacity（容量超限）</span>
+      <span class="item"><span class="dot" style="background:#bc8cff"></span>conversation_busy（会话占用中）</span>
+      <span class="item"><span class="dot" style="background:#8b949e"></span>coordination_unavailable（协调服务不可用）</span>
+      <span class="item"><span class="dot" style="background:#79c0ff"></span>circuit_open（熔断跳闸）</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Idempotency / Duplicate Submits（幂等 / 重复提交） <span class="metric-name">rate(rag_run_events_total[1m])</span>
+      <span class="info-icon">?<span class="tip"><b>duplicate 暴增≠出 bug</b>它只代表"同一个 request_id（请求幂等键）被重复提交了"，本身是幂等（idempotency）机制在正常拦截重复计算。真正要看的是它是不是伴随着延迟指标（P95/P99）同时上涨——那才说明根因是下游变慢导致客户端超时重试（client-side timeout retry），duplicate 只是这个根因的"副作用信号"，不是根因本身。<br><br><b>created 为什么也会跟着变：</b>下游变慢时，新请求也会因为排队、用户等待体验变差而受到抑制，故障期间 created 通常会略有下降，不只是 duplicate 单向暴增——一次故障往往牵动多个相关指标，不是只影响一条曲线。</span></span>
+    </h2>
+    <div class="desc">action="submit" 时按 outcome 拆分：created（全新请求）/ duplicate（幂等命中，重复提交）· 基准来自：重复副作用事故基线 2 次/月 → 上线后连续 5 个月为 0</div>
+    <div class="panel-narration" id="narration-chart-duplicate"></div>
+    <div class="chart-wrap">
+      <canvas id="chart-duplicate" height="160"></canvas>
+      <div class="crosshair-line" id="crosshair-chart-duplicate"></div>
+      <div class="chart-tooltip" id="tooltip-chart-duplicate"></div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:#3fb950"></span>created（全新请求）</span>
+      <span class="item"><span class="dot" style="background:#f85149"></span>duplicate（重复提交）</span>
+    </div>
+  </div>
+
+  <div class="panel full">
+    <h2>Recovery Outcomes（恢复流程结果分布） <span class="metric-name">rate(rag_run_events_total{action="recovery"}[1m])</span>
+      <span class="info-icon">?<span class="tip"><b>为什么恢复要单独重新鉴权（re-authorization）</b>被恢复的请求可能是很久以前中断的，这段时间用户权限可能已经变了（被收回、租户被禁）。所以恢复时不能沿用旧的鉴权结果，必须重新问一次权威系统（IAM，Identity and Access Management）。authorization_denied 说明重新问过后确实不再允许了，这个请求会被永久终止（terminal failure），不会再重试。<br><br><b>三者关系：</b>本面板里 success/denied/retry 是从"本轮恢复尝试总量"按比例拆分出来的三个互斥分支，不是三条各自独立的曲线——它们理应此消彼长，故障期间 retry 占比会显著升高（下游还没恢复，重试大概率还是失败）。</span></span>
+    </h2>
+    <div class="desc">对应 rag_service/service.py 里 recover_next() 各分支 · 基准来自模拟结果：审批恢复成功率上线后 99.93%，恢复面 2 Worker、每 Pod 恢复并发 2、最多尝试 3 次、恢复窗口 300 秒</div>
+    <div class="panel-narration" id="narration-chart-recovery"></div>
+    <div class="chart-wrap">
+      <canvas id="chart-recovery" height="120"></canvas>
+      <div class="crosshair-line" id="crosshair-chart-recovery"></div>
+      <div class="chart-tooltip" id="tooltip-chart-recovery"></div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:#3fb950"></span>success（恢复并成功执行）</span>
+      <span class="item"><span class="dot" style="background:#f85149"></span>authorization_denied（重新鉴权被拒，永久终止）</span>
+      <span class="item"><span class="dot" style="background:#d29922"></span>retryable_failure（暂时失败，稍后重试）</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-note">
+  这是一个纯前端模拟页面（无后端、无真实 Prometheus 服务），数据完全由本地 JS 随机生成，用于建立"Prometheus 抓取的指标最终会长成什么样"的直觉。<br>
+  真实链路是：<code>rag_service/telemetry.py</code> 里的 Counter/Histogram/Gauge 对象持续在内存里累积 → FastAPI 暴露 <code>GET /metrics</code> 端点 → 真实 Prometheus 服务器每隔约 15 秒主动抓取这个端点 → 存进它自己的时序数据库 → Grafana 读取 Prometheus 画出上面这类图。<br>
+  点击左侧侧边栏切换场景，可以重放你们讨论过的那次场景：下游 LLM 延迟抖动 → 客户端超时重试 → <code>duplicate</code> 指标随之暴增 → 恢复。<br>
+  本页面已按组件化结构拆分：<code>js/engine.js</code>（状态引擎）、<code>js/scenarios/*.js</code>（场景插件）、<code>js/components/*.js</code>（UI 组件）、<code>styles/*.css</code>（样式模块）。查看源码目录结构即可了解新增场景/图表的扩展方式。
+</div>
+
+</div><!-- /.main-content -->
+
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -6,7 +7,9 @@ from rag_service.api import create_app
 from rag_service.auth import TrustedHeaderIdentityProvider
 from rag_service.auth import GatewaySharedSecretIdentityProvider
 from rag_service.conversation import ConversationRecord
-from rag_service.service import ServiceExecutionError
+from rag_service.coordination import ConversationBusyError, CoordinationUnavailableError
+from rag_service.service import RequestPendingError, ServiceExecutionError
+from rag_service.run_store import RunStatus
 
 
 class FakeService:
@@ -14,6 +17,9 @@ class FakeService:
         self.commands = []
         self.identities = []
         self.fail = False
+        self.coordination_error = None
+        self.durable_recovery_enabled = False
+        self.pending = False
 
     @staticmethod
     def response(command):
@@ -29,8 +35,12 @@ class FakeService:
         }
 
     def query(self, command, identity):
+        if self.coordination_error is not None:
+            raise self.coordination_error
         if self.fail:
             raise ServiceExecutionError("internal detail")
+        if self.pending:
+            raise RequestPendingError(command.request_id, RunStatus.RUNNING)
         self.commands.append(command)
         self.identities.append(identity)
         return self.response(command)
@@ -54,6 +64,20 @@ class FakeService:
 
     def delete_conversation(self, conversation_id, identity):
         return True
+
+    def get_request(self, request_id, identity):
+        return SimpleNamespace(
+            request_id=request_id,
+            conversation_id="conversation-1",
+            status=RunStatus.SUCCEEDED,
+            attempt_count=2,
+            max_attempts=3,
+            submitted_at_ms=1000,
+            updated_at_ms=2000,
+            completed_at_ms=2000,
+            error_category=None,
+            result=self.response(SimpleNamespace(request_id=request_id, conversation_id="conversation-1")),
+        )
 
     def ready(self):
         return True
@@ -133,6 +157,19 @@ class ApiContractTest(unittest.TestCase):
         self.assertEqual(response.json()["error"]["code"], "DEPENDENCY_UNAVAILABLE")
         self.assertNotIn("internal detail", response.text)
 
+    def test_distributed_coordination_errors_have_stable_contracts(self):
+        self.service.coordination_error = ConversationBusyError("internal lock key")
+        busy = self.client.post("/v1/query", headers=self.headers, json={"question": "hello"})
+        self.service.coordination_error = CoordinationUnavailableError("redis.internal:6379")
+        unavailable = self.client.post("/v1/query", headers=self.headers, json={"question": "hello"})
+
+        self.assertEqual(busy.status_code, 409)
+        self.assertEqual(busy.json()["error"]["code"], "CONVERSATION_BUSY")
+        self.assertNotIn("internal lock key", busy.text)
+        self.assertEqual(unavailable.status_code, 503)
+        self.assertEqual(unavailable.json()["error"]["code"], "COORDINATION_UNAVAILABLE")
+        self.assertNotIn("redis.internal", unavailable.text)
+
     def test_sse_stream_has_progress_answer_and_done_events(self):
         response = self.client.post(
             "/v1/query/stream",
@@ -145,6 +182,29 @@ class ApiContractTest(unittest.TestCase):
         self.assertIn("event: answer", response.text)
         self.assertIn("event: done", response.text)
         self.assertNotIn("documents", response.text)
+
+    def test_durable_query_requires_supplied_request_id_and_pending_returns_location(self):
+        self.service.durable_recovery_enabled = True
+        missing = self.client.post(
+            "/v1/query",
+            headers={"X-Tenant-ID": "tenant-a", "X-User-ID": "alice"},
+            json={"question": "hello"},
+        )
+        self.service.pending = True
+        pending = self.client.post("/v1/query", headers=self.headers, json={"question": "hello"})
+
+        self.assertEqual(missing.status_code, 400)
+        self.assertEqual(missing.json()["error"]["code"], "REQUEST_ID_REQUIRED")
+        self.assertEqual(pending.status_code, 202)
+        self.assertEqual(pending.headers["Location"], "/v1/requests/request-123")
+
+    def test_request_status_returns_result_without_original_payload(self):
+        response = self.client.get("/v1/requests/request-123", headers=self.headers)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "SUCCEEDED")
+        self.assertEqual(response.json()["result"]["answer"], "verified answer")
+        self.assertNotIn("question", response.json())
 
     def test_conversation_metadata_does_not_expose_summary(self):
         response = self.client.get("/v1/conversations/conversation-1", headers=self.headers)

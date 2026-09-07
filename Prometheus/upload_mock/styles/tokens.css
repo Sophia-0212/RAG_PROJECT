@@ -1,0 +1,56 @@
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-subtle: #f8fafc;
+  --surface-blue: #f2f7ff;
+  --surface-dark: #121a2a;
+  --text: #17223b;
+  --text-secondary: #566176;
+  --muted: #8791a5;
+  --border: #dfe4ec;
+  --border-strong: #cbd3df;
+  --primary: #2468f2;
+  --primary-hover: #1854cc;
+  --primary-soft: #e9f1ff;
+  --green: #169b62;
+  --green-soft: #eaf8f1;
+  --amber: #b96f08;
+  --amber-soft: #fff7e8;
+  --red: #d83b46;
+  --red-soft: #fff0f1;
+  --cyan: #167f9c;
+  --cyan-soft: #eaf8fb;
+  --violet: #7657c8;
+  --violet-soft: #f2effd;
+  --sidebar-width: 248px;
+  --topbar-height: 58px;
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow-sm: 0 2px 7px rgba(23, 34, 59, .06);
+  --shadow: 0 12px 34px rgba(20, 34, 61, .15);
+  --font-sans: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; min-height: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100vh; color: var(--text); background: var(--bg); font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; }
+button, input, select, textarea { font: inherit; letter-spacing: 0; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; text-decoration: none; }
+button { color: inherit; }
+.mono { font-family: var(--font-mono); letter-spacing: 0; }
+.muted { color: var(--muted); }
+.danger-text { color: var(--red) !important; }
+.success-text { color: var(--green) !important; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.spinner { width: 18px; height: 18px; display: inline-block; border: 2px solid #ccd7e7; border-top-color: var(--primary); border-radius: 50%; animation: spin .75s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

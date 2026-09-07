@@ -2,6 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 from rag_service.migrations import migrate_local_state
 
 
@@ -26,6 +28,9 @@ class DeploymentContractTest(unittest.TestCase):
 
         self.assertIn("torch==2.9.1", requirements)
         self.assertIn("sentence-transformers==6.0.0", requirements)
+        self.assertIn("langgraph-checkpoint-postgres==3.1.2", requirements)
+        self.assertIn("psycopg[binary,pool]==3.3.2", requirements)
+        self.assertIn("redis==8.1.0", requirements)
         self.assertNotIn("unstructured", requirements)
         self.assertNotIn("milvus-lite==", requirements)
 
@@ -47,10 +52,83 @@ class DeploymentContractTest(unittest.TestCase):
             "RAG_GATEWAY_SHARED_SECRET:?",
             "MILVUS_URI:?",
             "RAG_MODEL_CACHE_PATH:?",
+            "RAG_DATABASE_URL:?",
+            "RAG_REDIS_URL:?",
+            "RAG_STATE_BACKEND: postgres",
             "HF_HOME: /models",
         ):
             self.assertIn(control, compose)
         self.assertNotIn("CHANGEME", compose)
+        self.assertNotIn("rag_state:/var/lib/rag", compose)
+
+    def test_environment_example_matches_dual_backend_defaults(self):
+        example = (ROOT / ".env.example").read_text(encoding="utf-8")
+
+        for setting in (
+            "RAG_STATE_BACKEND=sqlite",
+            "RAG_DATABASE_URL=",
+            "RAG_DB_POOL_MAX_SIZE=16",
+            "RAG_REDIS_URL=",
+            "RAG_CONVERSATION_LOCK_TTL_SECONDS=45",
+            "RAG_MAX_CONCURRENT_REQUESTS=12",
+        ):
+            self.assertIn(setting, example)
+
+    def test_integration_compose_pins_postgres_and_redis_images(self):
+        compose = (ROOT / "deploy" / "docker-compose.integration.yml").read_text(encoding="utf-8")
+
+        self.assertIn("postgres:17-alpine@sha256:", compose)
+        self.assertIn("redis:7.4-alpine@sha256:", compose)
+        self.assertIn("profiles: [integration]", compose)
+
+    def test_kubernetes_baseline_is_three_replica_and_cross_zone(self):
+        documents = list(
+            yaml.safe_load_all((ROOT / "deploy" / "k8s" / "runtime.yaml").read_text(encoding="utf-8"))
+        )
+        deployment = next(item for item in documents if item and item.get("kind") == "Deployment")
+        pdb = next(item for item in documents if item and item.get("kind") == "PodDisruptionBudget")
+        hpa = next(item for item in documents if item and item.get("kind") == "HorizontalPodAutoscaler")
+
+        self.assertEqual(deployment["spec"]["replicas"], 3)
+        self.assertEqual(deployment["spec"]["strategy"]["rollingUpdate"]["maxUnavailable"], 0)
+        self.assertEqual(
+            deployment["spec"]["template"]["spec"]["topologySpreadConstraints"][0]["topologyKey"],
+            "topology.kubernetes.io/zone",
+        )
+        container = deployment["spec"]["template"]["spec"]["containers"][0]
+        self.assertEqual(container["args"][-1], "1")
+        self.assertTrue(container["securityContext"]["readOnlyRootFilesystem"])
+        self.assertEqual(pdb["spec"]["minAvailable"], 2)
+        self.assertEqual(hpa["spec"]["minReplicas"], 3)
+        self.assertEqual(hpa["spec"]["maxReplicas"], 9)
+
+    def test_kubernetes_runs_two_independent_recovery_workers(self):
+        documents = list(
+            yaml.safe_load_all((ROOT / "deploy" / "k8s" / "runtime.yaml").read_text(encoding="utf-8"))
+        )
+        deployments = {
+            item["metadata"]["name"]: item
+            for item in documents
+            if item and item.get("kind") == "Deployment"
+        }
+        worker = deployments["rag-recovery-worker"]
+        container = worker["spec"]["template"]["spec"]["containers"][0]
+
+        self.assertEqual(worker["spec"]["replicas"], 2)
+        self.assertIn("rag_service.recovery_worker", container["args"])
+        self.assertTrue(container["securityContext"]["readOnlyRootFilesystem"])
+        self.assertIn("readinessProbe", container)
+
+    def test_kubernetes_jobs_migrate_and_prune_shared_state(self):
+        documents = list(
+            yaml.safe_load_all((ROOT / "deploy" / "k8s" / "jobs.yaml").read_text(encoding="utf-8"))
+        )
+        job = next(item for item in documents if item and item.get("kind") == "Job")
+        cron = next(item for item in documents if item and item.get("kind") == "CronJob")
+
+        self.assertIn("schema", job["spec"]["template"]["spec"]["containers"][0]["args"])
+        self.assertEqual(cron["spec"]["concurrencyPolicy"], "Forbid")
+        self.assertIn("prune", cron["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]["args"])
 
     def test_langfuse_compose_contains_no_example_secret_defaults(self):
         compose = (ROOT / "langfuse" / "docker-compose.yml").read_text(encoding="utf-8")

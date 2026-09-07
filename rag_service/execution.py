@@ -14,21 +14,21 @@ from rag_service.settings import Settings, get_settings
 
 
 class FailureReason(StrEnum):
-    DEADLINE_EXCEEDED = "DEADLINE_EXCEEDED"
-    STEP_BUDGET_EXCEEDED = "STEP_BUDGET_EXCEEDED"
-    RETRIEVAL_BUDGET_EXCEEDED = "RETRIEVAL_BUDGET_EXCEEDED"
-    GENERATION_BUDGET_EXCEEDED = "GENERATION_BUDGET_EXCEEDED"
-    QUERY_REWRITE_EXHAUSTED = "QUERY_REWRITE_EXHAUSTED"
-    WEB_SEARCH_BUDGET_EXCEEDED = "WEB_SEARCH_BUDGET_EXCEEDED"
-    TOKEN_BUDGET_EXCEEDED = "TOKEN_BUDGET_EXCEEDED"
-    NO_PROGRESS = "NO_PROGRESS"
-    CLARIFICATION_REQUIRED = "CLARIFICATION_REQUIRED"
-    INVALID_REQUEST_CONTEXT = "INVALID_REQUEST_CONTEXT"
-    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
-    GROUNDING_FAILED = "GROUNDING_FAILED"
-    ANSWER_NOT_USEFUL = "ANSWER_NOT_USEFUL"
-    ROUTE_NOT_SUPPORTED = "ROUTE_NOT_SUPPORTED"
-    POLICY_EXHAUSTED = "POLICY_EXHAUSTED"
+    DEADLINE_EXCEEDED = "DEADLINE_EXCEEDED"  # 整体请求超时（超过request_timeout_seconds）
+    STEP_BUDGET_EXCEEDED = "STEP_BUDGET_EXCEEDED"  # Graph总步数用完（超过max_steps）
+    RETRIEVAL_BUDGET_EXCEEDED = "RETRIEVAL_BUDGET_EXCEEDED"  # 检索尝试次数用完（超过max_retrieval_attempts）
+    GENERATION_BUDGET_EXCEEDED = "GENERATION_BUDGET_EXCEEDED"  # 生成尝试次数用完（超过max_generation_attempts）
+    QUERY_REWRITE_EXHAUSTED = "QUERY_REWRITE_EXHAUSTED"  # 查询改写次数用完（超过max_query_transforms）
+    WEB_SEARCH_BUDGET_EXCEEDED = "WEB_SEARCH_BUDGET_EXCEEDED"  # 网页搜索次数用完（超过max_web_searches）
+    TOKEN_BUDGET_EXCEEDED = "TOKEN_BUDGET_EXCEEDED"  # 累计token用完（超过max_total_tokens）
+    NO_PROGRESS = "NO_PROGRESS"  # 原地打转：问题或候选文档重复，没有新进展
+    CLARIFICATION_REQUIRED = "CLARIFICATION_REQUIRED"  # 问题指代不清且无历史上下文，需要用户澄清
+    INVALID_REQUEST_CONTEXT = "INVALID_REQUEST_CONTEXT"  # 请求上下文缺失（缺request_id/tenant_id/user_id）
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"  # 没有检索到任何文档，证据不足
+    GROUNDING_FAILED = "GROUNDING_FAILED"  # 生成的答案没有被检索到的文档支撑（幻觉判定）
+    ANSWER_NOT_USEFUL = "ANSWER_NOT_USEFUL"  # 生成的答案被判定为对问题没有帮助
+    ROUTE_NOT_SUPPORTED = "ROUTE_NOT_SUPPORTED"  # 问题路由判定为当前不支持的类型
+    POLICY_EXHAUSTED = "POLICY_EXHAUSTED"  # 兜底原因：以上都不是，但流程走到了终点仍未产出结果
 
 
 class Action(StrEnum):
@@ -44,13 +44,13 @@ class Action(StrEnum):
 
 @dataclass(frozen=True)
 class ExecutionLimits:
-    max_steps: int = 16
-    max_retrieval_attempts: int = 3
-    max_generation_attempts: int = 3
-    max_query_transforms: int = 2
-    max_web_searches: int = 1
-    max_total_tokens: int = 8192
-    request_timeout_seconds: float = 30.0
+    max_steps: int = 16  # 单轮请求Graph总步数上限，不区分动作类型，累计到此强制停止
+    max_retrieval_attempts: int = 3  # 单轮请求内，检索动作最多允许执行几次
+    max_generation_attempts: int = 3  # 单轮请求内，生成/直接回答动作最多允许执行几次
+    max_query_transforms: int = 2  # 单轮请求内，查询改写最多允许几次
+    max_web_searches: int = 1  # 单轮请求内，网页搜索最多允许几次
+    max_total_tokens: int = 8192  # 单轮请求累计消耗的token上限（喂给LLM+LLM生成的内容总和）
+    request_timeout_seconds: float = 30.0  # 单轮请求从开始到必须完成的总时限（秒）
 
     @classmethod
     def from_settings(cls, settings: Settings | None = None) -> "ExecutionLimits":

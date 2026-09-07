@@ -12,9 +12,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=int(os.getenv("RAG_API_PORT", "8000")))
     parser.add_argument("--workers", type=int, default=1)
     args = parser.parse_args()
-    if args.workers != 1:
+    from rag_service.settings import get_settings
+
+    if get_settings().state_backend == "sqlite" and args.workers != 1:
         parser.error("the SQLite runtime supports exactly one worker; use a shared checkpointer before scaling out")
-    uvicorn.run("rag_service.api:create_app", factory=True, host=args.host, port=args.port, workers=1)
+    uvicorn.run("rag_service.api:create_app", factory=True, host=args.host, port=args.port, workers=args.workers)
 
 
 if __name__ == "__main__":

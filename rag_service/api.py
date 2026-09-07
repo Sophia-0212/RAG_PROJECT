@@ -21,6 +21,8 @@ from rag_service.api_models import (
     HealthResponse,
     QueryRequest,
     QueryResponse,
+    RequestAcceptedResponse,
+    RequestStatusResponse,
 )
 from rag_service.application import ApplicationRuntime, create_runtime
 from rag_service.auth import (
@@ -31,8 +33,20 @@ from rag_service.auth import (
     TrustedHeaderIdentityProvider,
 )
 from rag_service.conversation import ConversationAccessError
+from rag_service.coordination import (
+    ConversationBusyError,
+    CoordinationUnavailableError,
+)
 from rag_service.resilience import CapacityExceededError, QuotaExceededError
 from rag_service.service import RAGService, ServiceExecutionError, make_command
+from rag_service.service import RequestPendingError, RequestTerminalError
+from rag_service.run_store import (
+    ActiveConversationRunError,
+    IdempotencyConflictError,
+    RunAccessError,
+    RunNotFoundError,
+    RunStatus,
+)
 from rag_service.settings import get_settings
 
 
@@ -128,6 +142,7 @@ def create_app(
             response.headers["X-Request-ID"] = generated
             return response
         request.state.request_id = supplied or str(uuid4())
+        request.state.request_id_supplied = bool(supplied)
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response
@@ -139,6 +154,56 @@ def create_app(
     @app.exception_handler(ConversationAccessError)
     async def conversation_access_error(request: Request, exc: ConversationAccessError):
         return _error("CONVERSATION_FORBIDDEN", str(exc), _request_id(request), 403)
+
+    @app.exception_handler(RunAccessError)
+    async def run_access_error(request: Request, exc: RunAccessError):
+        return _error("REQUEST_FORBIDDEN", "request belongs to a different user", _request_id(request), 403)
+
+    @app.exception_handler(RunNotFoundError)
+    async def run_not_found(request: Request, exc: RunNotFoundError):
+        return _error("REQUEST_NOT_FOUND", "request does not exist", _request_id(request), 404)
+
+    @app.exception_handler(IdempotencyConflictError)
+    async def idempotency_conflict(request: Request, exc: IdempotencyConflictError):
+        return _error(
+            "IDEMPOTENCY_KEY_REUSED",
+            "X-Request-ID was already used with a different request payload",
+            _request_id(request),
+            409,
+        )
+
+    @app.exception_handler(ActiveConversationRunError)
+    async def active_conversation_run(request: Request, exc: ActiveConversationRunError):
+        response = _error(
+            "CONVERSATION_RECOVERY_PENDING",
+            "an earlier request in this conversation is unfinished",
+            _request_id(request),
+            409,
+        )
+        response.headers["Retry-After"] = "1"
+        return response
+
+    @app.exception_handler(RequestPendingError)
+    async def request_pending(request: Request, exc: RequestPendingError):
+        status_url = f"/v1/requests/{exc.request_id}"
+        payload = RequestAcceptedResponse(
+            request_id=exc.request_id,
+            status=exc.status.value,
+            status_url=status_url,
+        )
+        response = JSONResponse(status_code=202, content=payload.model_dump(mode="json"))
+        response.headers["Location"] = status_url
+        response.headers["Retry-After"] = "1"
+        return response
+
+    @app.exception_handler(RequestTerminalError)
+    async def request_terminal(request: Request, exc: RequestTerminalError):
+        code = {
+            RunStatus.CANCELLED: "REQUEST_CANCELLED",
+            RunStatus.EXPIRED: "REQUEST_RECOVERY_EXPIRED",
+        }.get(exc.status, "REQUEST_FAILED_TERMINAL")
+        status_code = 410 if exc.status in {RunStatus.CANCELLED, RunStatus.EXPIRED} else 409
+        return _error(code, "request cannot be resumed", _request_id(request), status_code)
 
     @app.exception_handler(KeyError)
     async def not_found(request: Request, exc: KeyError):
@@ -169,6 +234,23 @@ def create_app(
         response.headers["Retry-After"] = "1"
         return response
 
+    @app.exception_handler(ConversationBusyError)
+    async def conversation_busy(request: Request, exc: ConversationBusyError):
+        response = _error("CONVERSATION_BUSY", "conversation is already being processed", _request_id(request), 409)
+        response.headers["Retry-After"] = "1"
+        return response
+
+    @app.exception_handler(CoordinationUnavailableError)
+    async def coordination_unavailable(request: Request, exc: CoordinationUnavailableError):
+        response = _error(
+            "COORDINATION_UNAVAILABLE",
+            "distributed coordination is temporarily unavailable",
+            _request_id(request),
+            503,
+        )
+        response.headers["Retry-After"] = "1"
+        return response
+
     @app.exception_handler(Exception)
     async def internal_error(request: Request, exc: Exception):
         return _error("INTERNAL_ERROR", "an unexpected internal error occurred", _request_id(request), 500)
@@ -189,6 +271,16 @@ def create_app(
     def active_service(request: Request) -> RAGService:
         return request.app.state.rag_service
 
+    def require_stable_request_id(request: Request, rag_service: RAGService) -> JSONResponse | None:
+        if getattr(rag_service, "durable_recovery_enabled", False) and not request.state.request_id_supplied:
+            return _error(
+                "REQUEST_ID_REQUIRED",
+                "X-Request-ID is required when durable recovery is enabled",
+                _request_id(request),
+                400,
+            )
+        return None
+
     @app.get("/health/live", response_model=HealthResponse, tags=["health"])
     async def live() -> HealthResponse:
         return HealthResponse(status="ok", checks={"process": "ok"})
@@ -197,14 +289,15 @@ def create_app(
     async def ready(request: Request) -> Response:
         rag_service = active_service(request)
         identity_ready = identity_provider_configured
-        store_ready = await run_in_threadpool(rag_service.ready)
-        healthy = store_ready and identity_ready
+        if hasattr(rag_service, "ready_checks"):
+            checks = await run_in_threadpool(rag_service.ready_checks)
+        else:
+            store_ready = await run_in_threadpool(rag_service.ready)
+            checks = {"conversation_store": "ok" if store_ready else "failed"}
+        healthy = all(value == "ok" for value in checks.values()) and identity_ready
         payload = HealthResponse(
             status="ok" if healthy else "not_ready",
-            checks={
-                "conversation_store": "ok" if store_ready else "failed",
-                "identity_provider": "ok" if identity_ready else "missing",
-            },
+            checks={**checks, "identity_provider": "ok" if identity_ready else "missing"},
         )
         return JSONResponse(
             status_code=200 if healthy else 503,
@@ -216,19 +309,28 @@ def create_app(
         payload = await run_in_threadpool(active_service(request).metrics)
         return Response(content=payload, media_type=CONTENT_TYPE_LATEST)
 
-    @app.post("/v1/query", response_model=QueryResponse, tags=["query"])
+    @app.post(
+        "/v1/query",
+        response_model=QueryResponse,
+        responses={202: {"model": RequestAcceptedResponse}},
+        tags=["query"],
+    )
     async def query(
         body: QueryRequest,
         request: Request,
         claims: IdentityClaims = Depends(identity),
-    ) -> QueryResponse:
+    ) -> QueryResponse | Response:
+        rag_service = active_service(request)
+        missing_request_id = require_stable_request_id(request, rag_service)
+        if missing_request_id is not None:
+            return missing_request_id
         command = make_command(
             question=body.question,
             conversation_id=body.conversation_id,
             request_id=_request_id(request),
             constraints=body.constraints.model_dump(mode="python"),
         )
-        result = await run_in_threadpool(active_service(request).query, command, claims)
+        result = await run_in_threadpool(rag_service.query, command, claims)
         return QueryResponse.model_validate(result)
 
     @app.post("/v1/query/stream", tags=["query"])
@@ -237,13 +339,17 @@ def create_app(
         request: Request,
         claims: IdentityClaims = Depends(identity),
     ) -> StreamingResponse:
+        rag_service = active_service(request)
+        missing_request_id = require_stable_request_id(request, rag_service)
+        if missing_request_id is not None:
+            return missing_request_id
         command = make_command(
             question=body.question,
             conversation_id=body.conversation_id,
             request_id=_request_id(request),
             constraints=body.constraints.model_dump(mode="python"),
         )
-        iterator = active_service(request).stream(command, claims)
+        iterator = rag_service.stream(command, claims)
 
         async def events() -> AsyncIterator[str]:
             try:
@@ -253,6 +359,25 @@ def create_app(
                         yield _sse("done", {"request_id": command.request_id})
                         break
                     yield _sse(str(item["type"]), item)
+            except RequestPendingError as exc:
+                yield _sse(
+                    "error",
+                    {
+                        "code": "REQUEST_PENDING",
+                        "message": "request is still being processed",
+                        "request_id": exc.request_id,
+                        "status_url": f"/v1/requests/{exc.request_id}",
+                    },
+                )
+            except RequestTerminalError as exc:
+                yield _sse(
+                    "error",
+                    {
+                        "code": "REQUEST_TERMINAL",
+                        "message": "request cannot be resumed",
+                        "request_id": exc.request_id,
+                    },
+                )
             except Exception:
                 yield _sse(
                     "error",
@@ -271,6 +396,26 @@ def create_app(
             events(),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    @app.get("/v1/requests/{request_id}", response_model=RequestStatusResponse, tags=["query"])
+    async def get_request_status(
+        request_id: str,
+        request: Request,
+        claims: IdentityClaims = Depends(identity),
+    ) -> RequestStatusResponse:
+        run = await run_in_threadpool(active_service(request).get_request, request_id, claims)
+        return RequestStatusResponse(
+            request_id=run.request_id,
+            conversation_id=run.conversation_id,
+            status=run.status.value,
+            attempt_count=run.attempt_count,
+            max_attempts=run.max_attempts,
+            submitted_at_ms=run.submitted_at_ms,
+            updated_at_ms=run.updated_at_ms,
+            completed_at_ms=run.completed_at_ms,
+            error_category=run.error_category,
+            result=run.result,
         )
 
     @app.get("/v1/conversations/{conversation_id}", response_model=ConversationResponse, tags=["conversation"])
@@ -313,6 +458,10 @@ def create_app(
         request: Request,
         claims: IdentityClaims = Depends(identity),
     ) -> DifyRagResponse:
+        rag_service = active_service(request)
+        missing_request_id = require_stable_request_id(request, rag_service)
+        if missing_request_id is not None:
+            return missing_request_id
         constraints = {
             "source_ids": body.inputs.get("source_ids", []),
             "version_ids": body.inputs.get("version_ids", []),
@@ -323,7 +472,7 @@ def create_app(
             request_id=_request_id(request),
             constraints=constraints,
         )
-        result = await run_in_threadpool(active_service(request).query, command, claims)
+        result = await run_in_threadpool(rag_service.query, command, claims)
         return DifyRagResponse(
             answer=result["answer"],
             conversation_id=result["conversation_id"],

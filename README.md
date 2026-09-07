@@ -6,9 +6,9 @@ Graph 2 is the canonical workflow. Graph 1 and `agent/rag_agent.py` remain legac
 ## Current scope
 
 The repository provides engineering and evaluation baselines, governed ingestion, tenant-safe retrieval, structured
-citations, bounded Graph 2 execution, durable local conversation state, a versioned HTTP API, redacted telemetry,
-reliability controls, and a hardened single-instance deployment baseline. Shared multi-instance checkpoint storage
-and target-environment production evidence remain explicit follow-up work.
+citations, bounded Graph 2 execution, a versioned HTTP API, redacted telemetry, reliability controls, a local SQLite
+profile, and a PostgreSQL/Redis multi-replica deployment baseline with leased automatic request recovery. Target-
+environment IAM, Milvus, model-gateway, capacity, and SLO evidence remain explicit follow-up work.
 
 ## Environment
 
@@ -31,7 +31,12 @@ Important variables:
 - `RAG_FUSION_MODE`, `RAG_DENSE_WEIGHT`, `RAG_SPARSE_WEIGHT`: RRF or weighted hybrid fusion.
 - `RAG_RERANK_TIMEOUT_SECONDS`, `RAG_CONTEXT_MAX_TOKENS`: rerank fallback and context limits.
 - `RAG_MAX_*`, `RAG_REQUEST_TIMEOUT_SECONDS`: per-request graph budgets and deadline.
-- `RAG_CHECKPOINT_PATH`, `RAG_CONVERSATION_TTL_SECONDS`: durable local state and expiry.
+- `RAG_STATE_BACKEND`, `RAG_CHECKPOINT_PATH`: select `sqlite` for local work or `postgres` for shared state.
+- `RAG_DATABASE_URL`, `RAG_DB_POOL_MIN_SIZE`, `RAG_DB_POOL_MAX_SIZE`: PostgreSQL state and per-pod pool limits.
+- `RAG_REDIS_URL`, `RAG_CONVERSATION_LOCK_*`: shared tenant quota, conversation lease, and maintenance election.
+- `RAG_CONVERSATION_TTL_SECONDS`: durable conversation expiry.
+- `RAG_RECOVERY_*`, `RAG_RUN_LEASE_SECONDS`, `RAG_RUN_HEARTBEAT_SECONDS`: recovery window, attempts, worker polling, and fenced ownership.
+- `RAG_RECOVERY_AUTHORIZATION_URL`, `RAG_RECOVERY_AUTHORIZATION_TOKEN`: fail-closed IAM principal refresh for delayed recovery.
 - `TAVILY_API_KEY`: optional web-search route.
 - `LANGFUSE_*`: optional tracing stack.
 - `RAG_GATEWAY_SHARED_SECRET`: production gateway bearer secret, at least 32 characters.
@@ -58,6 +63,17 @@ Run all offline checks:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
+Run the isolated PostgreSQL/Redis integration suite:
+
+```bash
+docker compose -f deploy/docker-compose.integration.yml --profile integration up -d --wait
+RAG_RUN_INTEGRATION=1 \
+RAG_TEST_DATABASE_URL=postgresql://rag_test:rag_test_only@127.0.0.1:55432/rag_test \
+RAG_TEST_REDIS_URL=redis://127.0.0.1:56379/0 \
+.venv/bin/python -m unittest discover -s tests/integration -v
+docker compose -f deploy/docker-compose.integration.yml --profile integration down -v
+```
+
 Generate a measured load report against a running service:
 
 ```bash
@@ -68,19 +84,21 @@ Generate a measured load report against a running service:
 
 ## Evaluation baseline
 
-The versioned smoke set is `evaluation/datasets/crm_smoke_v1.jsonl`. It records questions, expected source IDs,
-answer facts, routing expectations, refusal cases, and tags. `evaluation/metrics.py` contains deterministic
-retrieval, ranking, citation, and ACL-leakage metrics.
+The governed teaching baseline is `evaluation/datasets/ad_crm_golden_small_v1.jsonl`: 64 fictional advertising-CRM
+cases across eight failure-mode categories, bound to the frozen corpus in `evaluation/corpus/ad_crm_v1/`. The labels
+include identity, as-of time, action, route, versioned evidence, required facts, forbidden evidence, risk, split, and
+annotation provenance. See `evaluation/DATASET_CARD.md` for scope and limitations.
 
-An evaluation runner should write a JSON object containing the metrics referenced by
-`evaluation/release_gate.json`. Apply the release gate with:
+Score a complete candidate prediction JSONL and apply the release gate:
 
 ```bash
-.venv/bin/python -m evaluation.cli path/to/metrics.json
+.venv/bin/python -m evaluation.run_cli path/to/candidate_predictions.jsonl \
+  --output .rag-state/evaluation/candidate-report.json
 ```
 
-The initial thresholds are explicit starting gates, not claimed production results. They must be recalibrated
-from the versioned dataset, retrieval experiments, security tests, and load evidence as later modules land.
+The runner emits aggregate metrics, governed slices, case-level failures, asset validation, and the gate decision.
+Thresholds are starting gates for this synthetic asset, not production-quality claims; recalibrate them using real,
+sanitized traffic and business-expert labels before production use.
 
 ## Governed Markdown ingestion
 
@@ -116,7 +134,7 @@ cannot overwrite a newer release.
 
 - `rag_service.settings`: typed environment configuration and validation.
 - `rag_service.application.create_graph()`: canonical application factory.
-- `rag_service.application.create_runtime()`: durable local graph/checkpoint/conversation composition.
+- `rag_service.application.create_runtime()`: backend-aware graph, checkpoint, conversation, and coordination composition.
 - `graph2`: current production-direction workflow.
 - `documents`: governed source contracts, change planning, checkpoints, Markdown parsing, and Milvus ingestion.
 - `evaluation`: versioned datasets, metrics, and release gating.
@@ -148,10 +166,20 @@ either stays within those limits or enters the `terminate` node with a stable re
 `GROUNDING_FAILED`, or `TOKEN_BUDGET_EXCEEDED`. A pronoun-only follow-up without conversation context requests
 clarification instead of guessing.
 
-The CLI uses a tenant-scoped hashed thread ID and SQLite checkpoints under `.rag-state/`. Conversation metadata binds
-the external conversation ID to one tenant and user, stores a bounded rolling summary, and removes expired graph
-threads during runtime startup. Checkpoint deserialization uses an explicit allowlist. SQLite is intended for local or
-lightweight single-process operation; a multi-instance deployment must supply a shared production checkpointer.
+The CLI defaults to tenant-scoped SQLite checkpoints under `.rag-state/`. Conversation metadata binds the external
+conversation ID to one tenant and user, stores a bounded rolling summary, and removes expired graph threads.
+Checkpoint deserialization uses an explicit allowlist. SQLite is limited to local, single-process operation.
+
+The production profile requires `RAG_STATE_BACKEND=postgres`, a PostgreSQL URL, and a Redis URL. PostgreSQL stores
+LangGraph checkpoints, request runs, idempotent conversation turns, and conversation ownership/TTL metadata. Redis provides cross-pod conversation leases,
+atomic tenant token buckets, and singleton maintenance election. A failed Redis coordination call fails closed; it
+does not silently fall back to process-local locking.
+
+When recovery is enabled, the API writes `(tenant_id, request_id)` before graph execution and uses one derived
+checkpoint thread per request. The first attempt runs with synchronous checkpoint durability. A dedicated worker
+claims stale work with a PostgreSQL lease/fencing token, refreshes authorization, and either replays the stored input
+before the first checkpoint, calls `invoke(None)` for pending graph work, or finalizes an already-complete snapshot.
+The guarantee is at-least-once node execution with idempotent result/turn finalization, not exactly-once node effects.
 
 Use `--conversation` to resume an existing local conversation after a process restart:
 
@@ -163,35 +191,40 @@ Use `--conversation` to resume an existing local conversation after a process re
 
 The OpenAPI document is available at `/openapi.json`. `POST /v1/query` returns a validated answer contract;
 `POST /v1/query/stream` emits `progress`, `answer`, and `done` SSE events without exposing raw retrieved documents.
-Conversation metadata can be read or deleted through `/v1/conversations/{conversation_id}`. Liveness and readiness
+`GET /v1/requests/{request_id}` returns an authenticated run status and recovered final result. A duplicate running
+request returns HTTP 202 with `Location`; reusing its ID for a different payload returns HTTP 409. Production durable
+queries require the caller-provided stable `X-Request-ID`. Conversation metadata can be read or deleted through
+`/v1/conversations/{conversation_id}`. Liveness and readiness
 are separate at `/health/live` and `/health/ready`.
 
 Development requests require `X-Tenant-ID` and `X-User-ID`; `X-Principal-ID` may be repeated or comma-separated.
 `X-Request-ID` is validated and echoed, or generated when absent. The built-in trusted-header identity provider is
 disabled outside development/test profiles, so production readiness requires an injected IAM verifier. See
-`docs/external-contracts.md` for ownership and retry boundaries.
+`docs/外部服务契约.md` for ownership and retry boundaries.
 
 ## Reliability and observability
 
 `/metrics` exposes low-cardinality Prometheus counters, histograms, and in-flight gauges. Structured trace events use
 an allowlist: they include hashed identity keys, request IDs, action latency, candidate IDs/scores, cited chunk IDs,
 budgets, and component versions, but exclude question text, document content, prompts, credentials, and conversation
-summaries. See `docs/operations.md` for the failure matrix and measurement workflow.
+summaries. See `docs/运维与降级策略.md` for the failure matrix and measurement workflow.
 
-Per-tenant token buckets and a global concurrency semaphore reject overload before Graph execution. Read-only/model
-nodes use bounded retry with jitter and dependency circuit breakers. Reranker timeout, error, or open circuit falls
-back to recall order and marks the response degraded. These values are protective defaults, not production SLOs;
+Redis-backed per-tenant token buckets and a per-pod concurrency semaphore reject overload before Graph execution.
+Redis also serializes updates to the same tenant/conversation across replicas. Read-only/model nodes use bounded retry
+with jitter and dependency circuit breakers. Reranker timeout, error, or open circuit falls back to recall order and
+marks the response degraded. These values are protective defaults, not production SLOs;
 capacity and alert thresholds must come from versioned reports generated in the target environment.
 
 ## Deployment and evidence
 
-The production image is pinned to a base-image digest and runs as UID/GID `10001` with one worker. It uses
+The production image is pinned to a base-image digest and runs as UID/GID `10001` with one worker per pod. It uses
 `requirements.service.lock` and the official CPU-only PyTorch wheel source; ingestion-only parser dependencies stay
 outside the query image. The remote-Milvus production profile also omits the adapter's unused `milvus-lite` extra.
 The Compose baseline uses a read-only root filesystem, drops Linux capabilities, requires
-runtime secrets, persists SQLite state, and mounts the reviewed Hugging Face model cache read-only. Validate it using
-`docs/deployment-runbook.md`; use `docs/incident-runbook.md` during incidents.
+runtime secrets, requires PostgreSQL/Redis, and mounts the reviewed Hugging Face model cache read-only. The Kubernetes
+baseline starts at three API replicas plus two recovery-worker replicas, with PDBs, an API HPA, probes, resource limits, a schema Job, and an hourly
+TTL-pruning CronJob. Validate it using `docs/部署与回滚手册.md`; use `docs/应急响应手册.md` during incidents.
 
-`docs/evidence-index.md` maps each enterprise capability to implementation and test evidence and lists the live
+`docs/企业级能力证据索引/0.企业级能力证据索引.md` maps each enterprise capability to implementation and test evidence and lists the live
 environment work that is still required. The Langfuse Compose file is a local-development stack, not the production
 RAG deployment.

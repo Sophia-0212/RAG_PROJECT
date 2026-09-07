@@ -1,0 +1,74 @@
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  margin-left: 6px;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  user-select: none;
+}
+.info-icon:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.info-icon .tip {
+  display: none;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content; /* 让内容决定实际宽度，不再固定死一个数值 */
+  min-width: 160px;    /* 内容很短时（比如一两个词）也不至于窄成一条缝 */
+  max-width: 320px;    /* 内容很长时的换行上限，避免说明框在宽屏上被拉成一整行不好读 */
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #1c2128;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text);
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  z-index: 50;
+}
+/* 说明框内容较长时的滚动条样式，跟整体深色主题保持一致 */
+.info-icon .tip::-webkit-scrollbar { width: 6px; }
+.info-icon .tip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.info-icon .tip::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.info-icon .tip b {
+  color: var(--blue);
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.info-icon:hover .tip { display: block; }
+/* 默认居中定位；JS 会在 hover 时按视口边界动态纠正 left/right，这里的规则作为无 JS 时的兜底 */
+.stat-card .info-icon .tip {
+  left: auto;
+  right: -10px;
+  transform: none;
+}
+.panel h2 .info-icon .tip {
+  left: auto;
+  right: 0;
+  transform: none;
+  top: 22px;
+}
+/* JS 动态纠正时用的定位模式：直接按 left 像素值摆放，不再用 transform 居中 */
+.info-icon .tip.js-positioned {
+  left: 0;
+  right: auto;
+  transform: none;
+}

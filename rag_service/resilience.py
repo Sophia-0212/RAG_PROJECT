@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TypeVar
+from typing import Any, TypeVar
 
 
 T = TypeVar("T")
@@ -196,7 +196,7 @@ class ConcurrencyLimiter:
 
 @dataclass
 class RuntimeResilience:
-    quota: TenantTokenBucket
+    quota: Any
     concurrency: ConcurrencyLimiter
     dependency_guards: dict[str, DependencyGuard]
 

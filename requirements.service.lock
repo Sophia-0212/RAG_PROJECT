@@ -9,12 +9,15 @@ langchain-huggingface==1.2.2
 # milvus-lite dependency is not used by the production remote-Milvus profile.
 langchain-openai==1.6.0
 langgraph==1.2.11
+langgraph-checkpoint-postgres==3.1.2
 langgraph-checkpoint-sqlite==3.1.1
 loguru==0.7.3
 pydantic==2.13.4
 prometheus-client==0.26.0
 pymilvus==3.0.1
+psycopg[binary,pool]==3.3.2
 python-dotenv==1.2.3
+redis==8.1.0
 sentence-transformers==6.0.0
 tiktoken==0.14.0
 uvicorn==0.52.4

@@ -3,8 +3,11 @@ import unittest
 from evaluation.metrics import (
     citation_precision,
     citation_recall,
+    fact_coverage,
+    forbidden_fact_rate,
     hit_rate_at_k,
     leakage_rate,
+    ndcg_at_k,
     recall_at_k,
     reciprocal_rank,
 )
@@ -29,6 +32,18 @@ class EvaluationMetricsTest(unittest.TestCase):
     def test_acl_leakage_rate_is_measurable(self):
         self.assertEqual(leakage_rate(["allowed", "forbidden"], ["forbidden"]), 0.5)
         self.assertEqual(leakage_rate([], ["forbidden"]), 0.0)
+
+    def test_ndcg_rewards_correct_evidence_order(self):
+        graded = {"primary": 3, "supporting": 1}
+
+        self.assertEqual(ndcg_at_k(["primary", "supporting"], graded, 2), 1.0)
+        self.assertLess(ndcg_at_k(["supporting", "primary"], graded, 2), 1.0)
+
+    def test_fact_and_forbidden_fact_matching_normalizes_text(self):
+        answer = "须在 4 个工作小时内联系；不能输出旧 API 密钥。"
+
+        self.assertEqual(fact_coverage(answer, [["4个工作小时"], ["不能输出旧API密钥"]]), 1.0)
+        self.assertEqual(forbidden_fact_rate(answer, ["旧API密钥", "内部底价"]), 0.5)
 
     def test_empty_relevance_contract_is_rejected(self):
         with self.assertRaises(ValueError):
