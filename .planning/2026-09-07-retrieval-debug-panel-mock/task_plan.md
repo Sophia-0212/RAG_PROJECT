@@ -4,10 +4,10 @@
 Build a standalone, interactive retrieval-debugging mock under `Prometheus/` that turns the investigation workflow in `task/01-检索召回优化.md` into a concrete learning experience.
 
 ## Next Step
-Implement the standalone HTML, CSS, and JavaScript page.
+Verify desktop/mobile rendering and the incident repair interactions in a real browser.
 
 ## Current Phase
-Phase 1
+Phase 4
 
 ## Phases
 
@@ -23,14 +23,14 @@ Phase 1
 - **Status:** complete
 
 ### Phase 3: Implementation
-- [ ] Execute the plan
-- [ ] Write to files before executing
-- **Status:** in_progress
+- [x] Execute the plan
+- [x] Write to files before executing
+- **Status:** complete
 
 ### Phase 4: Testing & Verification
 - [ ] Verify requirements met
 - [ ] Document test results
-- **Status:** pending
+- **Status:** in_progress
 
 ### Phase 5: Delivery
 - [ ] Review outputs

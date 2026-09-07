@@ -5,6 +5,9 @@
 - Read `Prometheus/task/01-检索召回优化.md` and extracted the five investigation scenarios.
 - Reviewed the existing `upload_mock` visual language and static-page constraints.
 - Chose a standalone dependency-free implementation at `Prometheus/retrieval_debug_mock/`.
+- Implemented the query controls, metrics, four-stage ranking pipeline, candidate details, five incident presets, and deterministic repair actions.
+- Corrected the Query Rewrite score simulation, RRF detail score, stage selection, dynamic latency, and clipboard interaction.
+- `node --check Prometheus/retrieval_debug_mock/app.js` passed.
 
 ## Session: 2026-09-07
 

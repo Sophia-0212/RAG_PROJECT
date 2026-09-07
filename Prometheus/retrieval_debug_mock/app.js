@@ -138,7 +138,7 @@ const state = {
   query: scenarios[0].query,
   config: { ...scenarios[0].config },
   selectedId: scenarios[0].selected,
-  selectedStage: 'fusion',
+  selectedStage: 'rrf',
   repaired: false,
   running: false,
   runCount: 1,
@@ -155,11 +155,18 @@ function rankMap(items) {
 
 function compute() {
   const active = scenario();
+  const scoreLookup = Object.fromEntries(
+    Object.entries(active.scores).map(([id, scores]) => [id, [...scores]]),
+  );
+  if (active.id === 'CRM-3211' && state.config.rewrite) {
+    scoreLookup.tags = [0.91, 12.40, 0.0330, 0.94];
+    scoreLookup.taxonomy = [0.68, 8.10, 0.0319, 0.52];
+  }
   let ids = Object.keys(active.scores);
   if (state.config.prefilter) ids = ids.filter((id) => documents[id].business !== '广告投放');
-  if (Number(state.config.threshold) > 0) ids = ids.filter((id) => active.scores[id][0] >= Number(state.config.threshold));
-  const dense = ids.map((id) => ({ id, score: active.scores[id][0] })).sort((a,b) => b.score-a.score);
-  let sparse = ids.map((id) => ({ id, score: active.scores[id][1] })).sort((a,b) => b.score-a.score);
+  if (Number(state.config.threshold) > 0) ids = ids.filter((id) => scoreLookup[id][0] >= Number(state.config.threshold));
+  const dense = ids.map((id) => ({ id, score: scoreLookup[id][0] })).sort((a,b) => b.score-a.score);
+  let sparse = ids.map((id) => ({ id, score: scoreLookup[id][1] })).sort((a,b) => b.score-a.score);
   const degraded = active.sparseDegraded && !state.repaired;
   if (degraded) sparse = [];
   const dRank = rankMap(dense);
@@ -171,9 +178,9 @@ function compute() {
     const sparsePart = sRank[id] ? sw / (60 + sRank[id]) : 0;
     return { id, score: densePart + sparsePart };
   }).sort((a,b) => b.score-a.score);
-  const rerank = fusion.map((item) => ({ id: item.id, score: active.scores[item.id][3] })).sort((a,b) => b.score-a.score);
+  const rerank = fusion.map((item) => ({ id: item.id, score: scoreLookup[item.id][3] })).sort((a,b) => b.score-a.score);
   const final = state.config.rerank ? rerank : fusion;
-  return { dense, sparse, fusion, rerank, final, degraded };
+  return { dense, sparse, fusion, rerank, final, degraded, scoreLookup };
 }
 
 function stageCard(name, subtitle, items, scoreType, time, number, degraded = false) {
@@ -208,7 +215,8 @@ function detail(result) {
   const sparseRank = rankMap(result.sparse)[state.selectedId] || '--';
   const fusionRank = rankMap(result.fusion)[state.selectedId] || '--';
   const rerankRank = rankMap(result.rerank)[state.selectedId] || '--';
-  const scores = active.scores[state.selectedId] || [0,0,0,0];
+  const scores = result.scoreLookup[state.selectedId] || [0,0,0,0];
+  const fusionScore = result.fusion.find((item) => item.id === state.selectedId)?.score || 0;
   const expected = state.selectedId === active.expected;
   const reason = expected
     ? '这是本案例的标准相关文档。检查它是否在召回阶段进入候选，并在融合/重排后保持靠前。'
@@ -226,7 +234,7 @@ function detail(result) {
       <div class="score-path">
         <div class="score-row"><label>Dense</label><span class="bar"><i style="width:${Math.round(scores[0]*100)}%"></i></span><strong>${scores[0].toFixed(2)} · #${denseRank}</strong></div>
         <div class="score-row"><label>BM25</label><span class="bar"><i style="width:${Math.min(100,Math.round(scores[1]/15*100))}%"></i></span><strong>${scores[1].toFixed(2)} · #${sparseRank}</strong></div>
-        <div class="score-row"><label>RRF</label><span class="bar"><i style="width:${Math.min(100,Math.round(scores[2]/.034*100))}%"></i></span><strong>${scores[2].toFixed(4)} · #${fusionRank}</strong></div>
+        <div class="score-row"><label>RRF</label><span class="bar"><i style="width:${Math.min(100,Math.round(fusionScore/.034*100))}%"></i></span><strong>${fusionScore.toFixed(4)} · #${fusionRank}</strong></div>
         <div class="score-row"><label>CrossEncoder</label><span class="bar"><i style="width:${Math.round(scores[3]*100)}%"></i></span><strong>${scores[3].toFixed(2)} · #${rerankRank}</strong></div>
       </div>
       <h4 class="section-title">治理元数据</h4>
@@ -246,7 +254,10 @@ function metrics(result) {
   const active = scenario();
   const finalTop = result.final[0]?.id;
   const hit = finalTop === active.expected;
-  const total = active.latency.reduce((a,b) => a+b,0) + (state.config.rewrite ? 46 : 0);
+  const sparseTime = result.degraded ? 120 : (active.id === 'CRM-3214' && state.repaired ? 34 : active.latency[1]);
+  const total = active.latency[0] + sparseTime + active.latency[2]
+    + (state.config.rerank ? (active.latency[3] || 36) : 0)
+    + (state.config.rewrite ? 46 : 0);
   return `<section class="metrics">
     <article class="metric ${hit ? 'good' : 'alert'}"><span class="metric-label">最终Top1 ${icon(hit ? 'checkCircle' : 'alert')}</span><strong>${hit ? '命中' : '偏离'}</strong><small>${safe(documents[finalTop]?.title || '无候选')}</small></article>
     <article class="metric"><span class="metric-label">候选数量</span><strong>${result.fusion.length}</strong><small>融合后去重候选</small></article>
@@ -319,7 +330,7 @@ function selectScenario(id) {
   state.query = next.query;
   state.config = { ...next.config };
   state.selectedId = next.selected;
-  state.selectedStage = 'fusion';
+  state.selectedStage = 'rrf';
   state.repaired = false;
   state.mobileOpen = false;
   render();
@@ -334,7 +345,7 @@ function applyFix() {
   if (id === 'CRM-3214') Object.assign(state.config, { rerank: true });
   state.repaired = true;
   state.selectedId = scenario().expected;
-  state.selectedStage = 'fusion';
+  state.selectedStage = 'rrf';
   state.runCount += 1;
   render();
   toast('已加载建议参数并重新模拟，请对比四阶段排名', 'success');
@@ -375,13 +386,21 @@ function bindEvents() {
   document.querySelector('#resetBtn').addEventListener('click', () => selectScenario(state.scenarioId));
   document.querySelector('#loadFix').addEventListener('click', applyFix);
   document.querySelector('#diagnoseBtn').addEventListener('click', applyFix);
-  document.querySelector('#toggleExpected').addEventListener('click', () => { state.selectedId = scenario().expected; state.selectedStage='fusion'; render(); });
+  document.querySelector('#toggleExpected').addEventListener('click', () => { state.selectedId = scenario().expected; state.selectedStage='rrf'; render(); });
   document.querySelector('#weightRange').addEventListener('input', (event) => { state.config.denseWeight = Number(event.target.value); state.repaired = false; render(); });
   document.querySelector('#threshold').addEventListener('change', (event) => { state.config.threshold = event.target.value; state.repaired = false; render(); });
   document.querySelector('#rerankToggle').addEventListener('change', (event) => { state.config.rerank = event.target.checked; state.repaired = false; render(); });
   document.querySelector('#rewriteToggle').addEventListener('change', (event) => { state.config.rewrite = event.target.checked; state.repaired = false; render(); });
   document.querySelector('#prefilterToggle').addEventListener('change', (event) => { state.config.prefilter = event.target.checked; state.repaired = false; render(); });
-  document.querySelector('#copyChunk').addEventListener('click', () => toast(`chunk-${state.selectedId}-20260905 已复制`));
+  document.querySelector('#copyChunk').addEventListener('click', async () => {
+    const chunkId = `chunk-${state.selectedId}-20260905`;
+    try {
+      await navigator.clipboard.writeText(chunkId);
+      toast(`${chunkId} 已复制`, 'success');
+    } catch {
+      toast(`Chunk ID: ${chunkId}`);
+    }
+  });
   document.querySelector('#markRelevant').addEventListener('click', () => toast('已加入本次调试的相关性标注草稿', 'success'));
   document.querySelector('#mobileMenu').addEventListener('click', () => { state.mobileOpen = true; render(); });
   document.querySelector('#scrim').addEventListener('click', () => { state.mobileOpen = false; render(); });
